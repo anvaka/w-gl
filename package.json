@@ -1,0 +1,20 @@
+{
+  "name": "wgl",
+  "version": "0.0.1",
+  "description": "A simple renderer for 2d",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "webgl",
+    "renderer",
+    "2d"
+  ],
+  "author": "Andrei Kashcha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvaka/wgl"
+  }
+}
