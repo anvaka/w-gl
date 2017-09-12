@@ -32,6 +32,7 @@ function makeScene(canvas) {
   var api = eventify({
     appendChild,
     getSceneCoordinate,
+    getClientCoordinate,
     getTransform,
     getRoot,
     removeChild,
@@ -122,6 +123,15 @@ function makeScene(canvas) {
     var y = (canvasY - t.dy)/t.scale;
 
     return {x, y};
+  }
+
+  function getClientCoordinate(sceneX, sceneY) {
+    var t = sceneRoot.transform;
+
+    var x = (sceneX * t.scale + t.dx)/pixelRatio;
+    var y = (sceneY * t.scale + t.dy)/pixelRatio;
+
+    return {x: x, y: y};
   }
 
   function setViewBox(rect) {
