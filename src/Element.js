@@ -13,6 +13,7 @@ class Element {
     this.worldTransform = new Transform();
     this.worldTransformNeedsUpdate = true;
     this.type = 'Element';
+    this.scene = null;
   }
 
   appendChild(child, sendToBack) {
@@ -23,6 +24,15 @@ class Element {
     } else {
       this.children.push(child);
     }
+    if (child.bindScene) {
+      child.bindScene(this.scene);
+    }
+
+    if (this.scene) this.scene.renderFrame();
+  }
+
+  bindScene(scene) {
+    this.scene = scene;
   }
 
   traverse(enterCallback, exitCallback) {
@@ -42,6 +52,9 @@ class Element {
     if (childIdx > -1) {
       this.children.splice(childIdx, 1);
     }
+
+    if (this.scene) this.scene.renderFrame();
+    this.scene = null;
   }
 
   updateWorldTransform(force) {

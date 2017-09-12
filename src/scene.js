@@ -6,14 +6,12 @@ import onClap from './clap';
 
 export default makeScene;
 
-var pixelRatio = window.devicePixelRatio;
 
 function makeScene(canvas) {
   var width;
   var height;
   var drawContext = { width: 0, height: 0 };
-
-  var sceneRoot = new Element();
+  var pixelRatio = window.devicePixelRatio;
 
   var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -22,13 +20,9 @@ function makeScene(canvas) {
   gl.clearColor(0, 0, 0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT)
 
+  var sceneRoot = new Element();
   updateCanvasSize();
   
-  var panzoom = makePanzoom(canvas, {
-    zoomSpeed: 0.025,
-    controller: wglPanZoom(canvas, sceneRoot)
-  });
-
   var api = eventify({
     appendChild,
     getSceneCoordinate,
@@ -39,14 +33,36 @@ function makeScene(canvas) {
     setViewBox,
     setClearColor,
     dispose,
+    renderFrame,
+
+    getPixelRatio,
+    setPixelRatio
   });
 
-  var frameToken = requestAnimationFrame(frame);
+  var panzoom = makePanzoom(canvas, {
+    zoomSpeed: 0.025,
+    controller: wglPanZoom(canvas, sceneRoot, api)
+  });
+
+  sceneRoot.bindScene(api);
+
+  var frameToken = 0;
   var disposeClick;
 
   listenToEvents();
 
+  renderFrame();
+
   return api;
+
+  function getPixelRatio() {
+    return pixelRatio;
+  }
+
+  function setPixelRatio(newPixelRatio) {
+    pixelRatio = newPixelRatio;
+    updateCanvasSize();
+  }
 
   function getRoot() {
     return sceneRoot;
@@ -79,7 +95,7 @@ function makeScene(canvas) {
 
     if (frameToken) {
       cancelAnimationFrame(frameToken);
-      frameToken = null;
+      frameToken = 0;
     }
   }
 
@@ -138,11 +154,16 @@ function makeScene(canvas) {
     panzoom.showRectangle(rect)
   }
 
+  function renderFrame() {
+    if (!frameToken) frameToken = requestAnimationFrame(frame)
+  }
+
   function frame() {
     gl.clear(gl.COLOR_BUFFER_BIT)
     drawContext.wasDirty = sceneRoot.updateWorldTransform();
     sceneRoot.draw(gl, drawContext);
-    frameToken = requestAnimationFrame(frame);
+    frameToken = 0;
+//    frameToken = requestAnimationFrame(frame);
   }
 
   function appendChild(child, sendToBack) {
@@ -154,14 +175,17 @@ function makeScene(canvas) {
   }
 }
 
-function wglPanZoom(canvas, sceneRoot) {
+function wglPanZoom(canvas, sceneRoot, scene) {
   return {
       applyTransform(newT) {
         var transform = sceneRoot.transform;
+        var pixelRatio = scene.getPixelRatio();
+
         transform.dx = newT.x * pixelRatio;
         transform.dy = newT.y * pixelRatio; 
         transform.scale = newT.scale;
         sceneRoot.worldTransformNeedsUpdate = true;
+        scene.renderFrame()
       },
 
       getOwner() {
