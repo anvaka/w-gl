@@ -48,7 +48,6 @@ function makeScene(canvas) {
 
   var frameToken = 0;
   var disposeClick;
-
   listenToEvents();
 
   renderFrame();
@@ -78,6 +77,8 @@ function makeScene(canvas) {
 
   function listenToEvents() {
     canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('transform', onTransform);
+
     disposeClick = onClap(canvas, onMouseClick, this);
 
     window.addEventListener('resize', onResize, true);
@@ -85,9 +86,9 @@ function makeScene(canvas) {
 
   function dispose() {
     canvas.removeEventListener('mousemove', onMouseMove);
+    canvas.removeEventListener('transform', onTransform);
     if (disposeClick) disposeClick();
 
-    canvas.removeEventListener('click', onMouseClick);
     window.removeEventListener('resize', onResize, true);
 
     panzoom.dispose();
@@ -111,15 +112,19 @@ function makeScene(canvas) {
     drawContext.width = width;
     drawContext.height = height;
     sceneRoot.worldTransformNeedsUpdate = true;
+    renderFrame();
   }
 
+  function onTransform(e) {
+    api.fire('transform', e);
+  }
   function onMouseClick(e) {
     var p = getSceneCoordinate(e.clientX, e.clientY);
     api.fire('click', {
       originalEvent: e,
       sceneX: p.x,
       sceneY: p.y,
-    });
+    })
   }
 
   function onMouseMove(e) {
