@@ -6,7 +6,7 @@ var config = {
 export default onClap;
 
 function onClap(element, callback, ctx) {
-  var touchStartTime
+  var touchStartTime = new Date();
   var startPos
 
   element.addEventListener('click', invokeHandler)
@@ -32,7 +32,7 @@ function onClap(element, callback, ctx) {
     // multitouch - ignore
     if (e.touches.length > 1) return
 
-    // single touch - use time diference to determine if it was a touch or
+    // single touch - use time difference to determine if it was a touch or
     // a swipe
     var dt = new Date() - touchStartTime
 
