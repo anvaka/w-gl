@@ -1,6 +1,6 @@
 {
   "name": "w-gl",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A simple renderer for 2d",
   "main": "build/wgl.js",
   "module": "build/wgl.module.js",
