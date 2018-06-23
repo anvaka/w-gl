@@ -7,13 +7,13 @@ import onClap from './clap';
 export default makeScene;
 
 
-function makeScene(canvas) {
+function makeScene(canvas, wglContextOptions) {
   var width;
   var height;
   var drawContext = { width: 0, height: 0 };
   var pixelRatio = window.devicePixelRatio;
 
-  var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  var gl = canvas.getContext('webgl', wglContextOptions) || canvas.getContext('experimental-webgl', wglContextOptions);
 
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.enable(gl.BLEND);
@@ -22,7 +22,7 @@ function makeScene(canvas) {
 
   var sceneRoot = new Element();
   updateCanvasSize();
-  
+
   var api = eventify({
     appendChild,
     getSceneCoordinate,
@@ -187,7 +187,7 @@ function wglPanZoom(canvas, sceneRoot, scene) {
         var pixelRatio = scene.getPixelRatio();
 
         transform.dx = newT.x * pixelRatio;
-        transform.dy = newT.y * pixelRatio; 
+        transform.dy = newT.y * pixelRatio;
         transform.scale = newT.scale;
         sceneRoot.worldTransformNeedsUpdate = true;
         scene.renderFrame()
