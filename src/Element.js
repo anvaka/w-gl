@@ -54,7 +54,6 @@ class Element {
     }
 
     if (this.scene) this.scene.renderFrame();
-    this.scene = null;
   }
 
   updateWorldTransform(force) {
