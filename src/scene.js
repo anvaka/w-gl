@@ -6,12 +6,14 @@ import onClap from './clap';
 
 export default makeScene;
 
-
-function makeScene(canvas, wglContextOptions) {
+function makeScene(canvas, options) {
   var width;
   var height;
   var drawContext = { width: 0, height: 0 };
   var pixelRatio = window.devicePixelRatio;
+  if (!options) options = {};
+
+  var wglContextOptions = options.wglContext;
 
   var gl = canvas.getContext('webgl', wglContextOptions) || canvas.getContext('experimental-webgl', wglContextOptions);
 
@@ -20,6 +22,7 @@ function makeScene(canvas, wglContextOptions) {
   gl.clearColor(0, 0, 0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT)
 
+  var frameToken = 0;
   var sceneRoot = new Element();
   updateCanvasSize();
 
@@ -46,7 +49,6 @@ function makeScene(canvas, wglContextOptions) {
 
   sceneRoot.bindScene(api);
 
-  var frameToken = 0;
   var disposeClick;
   listenToEvents();
 
@@ -105,8 +107,15 @@ function makeScene(canvas, wglContextOptions) {
   }
 
   function updateCanvasSize() {
-    width = canvas.width = canvas.offsetWidth * pixelRatio
-    height = canvas.height = canvas.offsetHeight * pixelRatio
+    if (options.size) {
+      // Fixed size canvas doesn't update. We assume CSS does the scaling.
+      width = canvas.width = options.size.width;
+      height = canvas.height = options.size.height;
+    } else {
+      width = canvas.width = canvas.offsetWidth * pixelRatio;
+      height = canvas.height = canvas.offsetHeight * pixelRatio;
+    }
+
     gl.viewport(0, 0, width, height);
 
     drawContext.width = width;
@@ -156,7 +165,10 @@ function makeScene(canvas, wglContextOptions) {
   }
 
   function setViewBox(rect) {
-    panzoom.showRectangle(rect)
+    panzoom.showRectangle(rect, {
+      width: width,
+      height: height
+    });
   }
 
   function renderFrame() {
@@ -168,7 +180,6 @@ function makeScene(canvas, wglContextOptions) {
     drawContext.wasDirty = sceneRoot.updateWorldTransform();
     sceneRoot.draw(gl, drawContext);
     frameToken = 0;
-//    frameToken = requestAnimationFrame(frame);
   }
 
   function appendChild(child, sendToBack) {
@@ -178,23 +189,23 @@ function makeScene(canvas, wglContextOptions) {
   function removeChild(child) {
     sceneRoot.removeChild(child)
   }
-}
 
-function wglPanZoom(canvas, sceneRoot, scene) {
-  return {
-      applyTransform(newT) {
-        var transform = sceneRoot.transform;
-        var pixelRatio = scene.getPixelRatio();
+  function wglPanZoom(canvas, sceneRoot, scene) {
+    return {
+        applyTransform(newT) {
+          var transform = sceneRoot.transform;
+          var pixelRatio = scene.getPixelRatio();
 
-        transform.dx = newT.x * pixelRatio;
-        transform.dy = newT.y * pixelRatio;
-        transform.scale = newT.scale;
-        sceneRoot.worldTransformNeedsUpdate = true;
-        scene.renderFrame()
-      },
+          transform.dx = newT.x * pixelRatio;
+          transform.dy = newT.y * pixelRatio;
+          transform.scale = newT.scale;
+          sceneRoot.worldTransformNeedsUpdate = true;
+          scene.renderFrame()
+        },
 
-      getOwner() {
-        return canvas
+        getOwner() {
+          return canvas
+        }
       }
-    }
+  }
 }
