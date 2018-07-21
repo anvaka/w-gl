@@ -191,20 +191,35 @@ function makeScene(canvas, options) {
   }
 
   function wglPanZoom(canvas, sceneRoot, scene) {
-    return {
-        applyTransform(newT) {
-          var transform = sceneRoot.transform;
-          var pixelRatio = scene.getPixelRatio();
+    var controller = {
+      applyTransform(newT) {
+        var transform = sceneRoot.transform;
+        var pixelRatio = scene.getPixelRatio();
 
-          transform.dx = newT.x * pixelRatio;
-          transform.dy = newT.y * pixelRatio;
-          transform.scale = newT.scale;
-          sceneRoot.worldTransformNeedsUpdate = true;
-          scene.renderFrame()
-        },
+        transform.dx = newT.x * pixelRatio;
+        transform.dy = newT.y * pixelRatio;
+        transform.scale = newT.scale;
+        sceneRoot.worldTransformNeedsUpdate = true;
+        scene.renderFrame()
+      },
 
-        getOwner() {
-          return canvas
+      getOwner() {
+        return canvas
+      }
+    }
+
+    if (options.size){
+      controller.getScreenCTM = customSizeCTM;
+    }
+
+    return controller;
+
+    function customSizeCTM() {
+        return {
+          a: (options.size.width/canvas.offsetWidth), //scale x
+          d: (options.size.height/canvas.offsetHeight), //scale y
+          e: 0,
+          f: 0
         }
       }
   }
