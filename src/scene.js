@@ -127,6 +127,7 @@ function makeScene(canvas, options) {
   function onTransform(e) {
     api.fire('transform', e);
   }
+
   function onMouseClick(e) {
     var p = getSceneCoordinate(e.clientX, e.clientY);
     api.fire('click', {
