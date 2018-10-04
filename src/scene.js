@@ -42,9 +42,11 @@ function makeScene(canvas, options) {
     setPixelRatio
   });
 
+  var wglController = wglPanZoom(canvas, sceneRoot, api);
+
   var panzoom = makePanzoom(canvas, {
     zoomSpeed: 0.025,
-    controller: wglPanZoom(canvas, sceneRoot, api)
+    controller: wglController 
   });
 
   sceneRoot.bindScene(api);
@@ -170,6 +172,8 @@ function makeScene(canvas, options) {
       width: width,
       height: height
     });
+    var newT = panzoom.getTransform();
+    wglController.applyTransform(newT);
   }
 
   function renderFrame() {
