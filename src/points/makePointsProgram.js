@@ -57,7 +57,9 @@ function makePointsProgram(gl, data) {
   }
 
   function dispose() {
-    gl.deleteBuffer(buffer);
+    // For some reason disposing the buffer results in unbindable
+    // buffer for the lines program (that is created after this scene is disposed).
+    // gl.deleteBuffer(buffer);
     gl.deleteProgram(vertexProgram);
     gl.deleteTexture(pointTexture);
     vertexProgramCache.delete(gl);
