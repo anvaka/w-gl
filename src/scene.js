@@ -43,9 +43,10 @@ function makeScene(canvas, options) {
   });
 
   var wglController = wglPanZoom(canvas, sceneRoot, api);
+  canvas.style.outline = 'none';
+  canvas.setAttribute('tabindex', 0);
 
   var panzoom = makePanzoom(canvas, {
-    zoomSpeed: 0.025,
     controller: wglController 
   });
 
@@ -176,7 +177,11 @@ function makeScene(canvas, options) {
     wglController.applyTransform(newT);
   }
 
-  function renderFrame() {
+  function renderFrame(now) {
+    if (now) {
+      return frame();
+    }
+
     if (!frameToken) frameToken = requestAnimationFrame(frame)
   }
 

@@ -27,8 +27,8 @@
     "rollup-plugin-commonjs": "^8.2.1"
   },
   "dependencies": {
-    "ngraph.events": "0.0.4",
-    "panzoom": "^8.7.5",
+    "ngraph.events": "1.2.1",
+    "panzoom": "^9.0.0",
     "rollup-plugin-node-resolve": "^3.0.0"
   }
 }
