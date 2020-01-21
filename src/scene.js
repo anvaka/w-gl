@@ -35,11 +35,14 @@ function makeScene(canvas, options) {
     removeChild,
     setViewBox,
     setClearColor,
+    clear,
     dispose,
     renderFrame,
 
     getPixelRatio,
-    setPixelRatio
+    setPixelRatio,
+
+    getPanzoom
   });
 
   var wglController = wglPanZoom(canvas, sceneRoot, api);
@@ -47,7 +50,7 @@ function makeScene(canvas, options) {
   canvas.setAttribute('tabindex', 0);
 
   var panzoom = makePanzoom(canvas, {
-    controller: wglController 
+    controller: wglController
   });
 
   sceneRoot.bindScene(api);
@@ -70,6 +73,10 @@ function makeScene(canvas, options) {
 
   function getRoot() {
     return sceneRoot;
+  }
+
+  function getPanzoom() {
+    return panzoom;
   }
 
   function getTransform() {
@@ -177,8 +184,8 @@ function makeScene(canvas, options) {
     wglController.applyTransform(newT);
   }
 
-  function renderFrame(now) {
-    if (now) {
+  function renderFrame(immediate) {
+    if (immediate) {
       return frame();
     }
 
@@ -190,6 +197,10 @@ function makeScene(canvas, options) {
     drawContext.wasDirty = sceneRoot.updateWorldTransform();
     sceneRoot.draw(gl, drawContext);
     frameToken = 0;
+  }
+
+  function clear() {
+    gl.clear(gl.COLOR_BUFFER_BIT)
   }
 
   function appendChild(child, sendToBack) {
