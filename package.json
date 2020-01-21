@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "ngraph.events": "1.2.1",
-    "panzoom": "^9.0.0",
+    "panzoom": "^9.1.0",
     "rollup-plugin-node-resolve": "^3.0.0"
   }
 }
