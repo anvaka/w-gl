@@ -89,7 +89,8 @@ function makeScene(canvas, options) {
 
   function listenToEvents() {
     canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('transform', onTransform);
+
+    panzoom.on('transform', onTransform);
 
     disposeClick = onClap(canvas, onMouseClick, this);
 
@@ -98,7 +99,9 @@ function makeScene(canvas, options) {
 
   function dispose() {
     canvas.removeEventListener('mousemove', onMouseMove);
-    canvas.removeEventListener('transform', onTransform);
+
+    panzoom.off('transform', onTransform);
+
     if (disposeClick) disposeClick();
 
     window.removeEventListener('resize', onResize, true);
