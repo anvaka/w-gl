@@ -17,7 +17,7 @@ function makeScene(canvas, options) {
 
   var gl = canvas.getContext('webgl', wglContextOptions) || canvas.getContext('experimental-webgl', wglContextOptions);
 
-  gl.blendFunc(gl.DST_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.enable(gl.BLEND);
   gl.clearColor(0, 0, 0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT)
@@ -32,6 +32,7 @@ function makeScene(canvas, options) {
     getClientCoordinate,
     getTransform,
     getRoot,
+    getGL,
     removeChild,
     setViewBox,
     setClearColor,
@@ -69,6 +70,10 @@ function makeScene(canvas, options) {
   function setPixelRatio(newPixelRatio) {
     pixelRatio = newPixelRatio;
     updateCanvasSize();
+  }
+
+  function getGL() {
+    return gl;
   }
 
   function getRoot() {
