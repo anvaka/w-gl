@@ -2,6 +2,10 @@ import Element from '../Element';
 import Color from '../Color';
 import makeLineStripProgram from './makeLineStripProgram';
 
+/**
+ * Line strip is implemented as a cyclic buffer. Each subsequent element of the
+ * buffer is connected with a line to the previous element of the buffer.
+ */
 export default class LineStripCollection extends Element {
   constructor(capacity, allowColors = false) {
     super();
@@ -19,6 +23,7 @@ export default class LineStripCollection extends Element {
     this.buffer = new ArrayBuffer((capacity + 1) * this.itemsPerLine * bytesPerElement)
     this.positions = new Float32Array(this.buffer);
     if (allowColors) {
+      // We are sharing the buffer!
       this.colors = new Uint32Array(this.buffer);
     }
   }
