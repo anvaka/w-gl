@@ -5,12 +5,16 @@ export default makeLineProgram;
 
 let lineProgramCache = new Map();
 
-function makeLineProgram(gl, data, allowColors) {
+function makeLineProgram(gl, lineStripCollection) {
   // TODO: Cache on allow colors too
   let lineProgram = lineProgramCache.get(gl);
-  const itemsPerVertex = allowColors ? 3 : 2;
+  let {allowColors, is3D} = lineStripCollection;
+  const itemsPerVertex = 2 + (allowColors ? 1 : 0) + (is3D ? 1 : 0);
+
+  let data = lineStripCollection.buffer;
+
   if (!lineProgram) {
-    const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors);
+    const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors, is3D);
     var lineVSShader = utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
     var lineFSShader = utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
     lineProgram = utils.link(gl, lineVSShader, lineFSShader);
@@ -18,6 +22,9 @@ function makeLineProgram(gl, data, allowColors) {
   }
 
   var locations = utils.getLocations(gl, lineProgram);
+  let lineSize = is3D ? 3 : 2;
+  let lineStride = (lineSize + 1) * 4;
+  let colorOffset = lineSize * 4;
 
   var lineBuffer = gl.createBuffer();
 
@@ -34,14 +41,17 @@ function makeLineProgram(gl, data, allowColors) {
     lineProgramCache.delete(gl);
   }
 
-  function draw(transform, color, screen, startFrom, madeFullCircle) {
+  function draw(lineStripCollection, drawContext) {
     if (data.length === 0) return;
 
     gl.useProgram(lineProgram);
 
-    const transformArray = transform.getArray();
-    gl.uniformMatrix4fv(locations.uniforms.uTransform, false, transformArray);
-    gl.uniform2f(locations.uniforms.uScreenSize, screen.width, screen.height);
+    gl.uniformMatrix4fv(locations.uniforms.uModel, false, lineStripCollection.worldModel);
+    gl.uniformMatrix4fv(locations.uniforms.uCamera, false, drawContext.camera);
+    gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
+    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
+
+    let {color, nextElementIndex, madeFullCircle} = lineStripCollection;
     gl.uniform4f(locations.uniforms.uColor, color.r, color.g, color.b, color.a);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
@@ -50,25 +60,26 @@ function makeLineProgram(gl, data, allowColors) {
     if (allowColors) {
       gl.vertexAttribPointer(
         locations.attributes.aPosition,
-        2,
+        lineSize,
         gl.FLOAT,
         false,
-        3 * 4,
+        lineStride,
         0
       );
+
       gl.enableVertexAttribArray(locations.attributes.aColor);
       gl.vertexAttribPointer(
         locations.attributes.aColor,
         4,
         gl.UNSIGNED_BYTE,
         true,
-        3 * 4,
-        2 * 4
+        lineStride,
+        colorOffset
       );
     } else {
       gl.vertexAttribPointer(
         locations.attributes.aPosition,
-        2,
+        lineSize,
         gl.FLOAT,
         false,
         0,
@@ -77,11 +88,11 @@ function makeLineProgram(gl, data, allowColors) {
     }
 
     if (madeFullCircle) {
-      let elementsCount = data.byteLength / 4 / itemsPerVertex - startFrom;
-      gl.drawArrays(gl.LINE_STRIP, startFrom, elementsCount);
-      if (startFrom > 1) gl.drawArrays(gl.LINE_STRIP, 0, startFrom - 1);
+      let elementsCount = data.byteLength / 4 / itemsPerVertex - nextElementIndex;
+      gl.drawArrays(gl.LINE_STRIP, nextElementIndex, elementsCount);
+      if (nextElementIndex > 1) gl.drawArrays(gl.LINE_STRIP, 0, nextElementIndex - 1);
     } else {
-      gl.drawArrays(gl.LINE_STRIP, 1, startFrom - 1);
+      gl.drawArrays(gl.LINE_STRIP, 1, nextElementIndex - 1);
     }
   }
 }
@@ -97,24 +108,18 @@ void main() {
     {
       globals() {
         return `
-  attribute vec2 aPosition;
+  attribute vec3 aPosition;
   varying vec4 vColor;
   ${allowColors ? 'attribute vec4 aColor;' : ''}
   uniform vec4 uColor;
-  uniform vec2 uScreenSize;
-  uniform mat4 uTransform;
+  uniform mat4 uCamera;
+  uniform mat4 uModel;
+  uniform mat4 uView;
 `;
       },
       mainBody() {
         return `
-  mat4 transformed = mat4(uTransform);
-
-  // Translate screen coordinates to webgl space
-  vec2 vv = 2.0 * uTransform[3].xy/uScreenSize;
-  transformed[3][0] = vv.x - 1.0;
-  transformed[3][1] = 1.0 - vv.y;
-  vec2 xy = 2.0 * aPosition.xy/uScreenSize;
-  gl_Position = transformed * vec4(xy.x, -xy.y, 0.0, 1.0);
+  gl_Position = uCamera * uView * uModel * vec4(aPosition, 1.0);
   vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
 `;
       }

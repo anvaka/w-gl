@@ -3,13 +3,13 @@ import eventify from 'ngraph.events';
 
 import Element from './Element';
 import onClap from './clap';
+import {mat4, vec3} from 'gl-matrix';
 
 export default makeScene;
 
 function makeScene(canvas, options) {
   var width;
   var height;
-  var drawContext = { width: 0, height: 0 };
   var pixelRatio = window.devicePixelRatio;
   if (!options) options = {};
 
@@ -24,6 +24,20 @@ function makeScene(canvas, options) {
 
   var frameToken = 0;
   var sceneRoot = new Element();
+
+  var view = mat4.create();
+  var camera = mat4.create();
+  var fov = Math.PI / 6;
+  mat4.perspective(camera, fov, window.innerWidth/window.innerHeight, 0);
+  var drawContext = { 
+    width: window.innerWidth,
+    height: window.innerHeight,
+    camera,
+    view,
+    fov,
+    origin: new Float32Array(3)
+ };
+
   updateCanvasSize();
 
   var api = eventify({
@@ -46,7 +60,7 @@ function makeScene(canvas, options) {
     getPanzoom
   });
 
-  var wglController = wglPanZoom(canvas, sceneRoot, api);
+  var wglController = wglPanZoom(canvas, drawContext, api);
   canvas.style.outline = 'none';
   canvas.setAttribute('tabindex', 0);
 
@@ -85,7 +99,7 @@ function makeScene(canvas, options) {
   }
 
   function getTransform() {
-    return sceneRoot.transform;
+    return sceneRoot.model;
   }
 
   function setClearColor(r, g, b, a) {
@@ -139,6 +153,7 @@ function makeScene(canvas, options) {
     drawContext.width = width;
     drawContext.height = height;
     sceneRoot.worldTransformNeedsUpdate = true;
+    mat4.perspective(camera, fov, width/height, 0);
     renderFrame();
   }
 
@@ -165,13 +180,16 @@ function makeScene(canvas, options) {
   }
 
   function getSceneCoordinate(clientX, clientY) {
-    var t = sceneRoot.transform;
-    var canvasX = clientX * pixelRatio;
-    var canvasY = clientY * pixelRatio;
-    var x = (canvasX - t.dx)/t.scale;
-    var y = (canvasY - t.dy)/t.scale;
+    // var t = mat4.invert(mat4.create(), sceneRoot.model);
+    let coord = vec3.transformMat4([], [clientX, clientY, 0], view);
+    return coord;
 
-    return {x, y};
+    // var canvasX = clientX * pixelRatio;
+    // var canvasY = clientY * pixelRatio;
+    // var x = (canvasX - t.dx)/t.scale;
+    // var y = (canvasY - t.dy)/t.scale;
+
+    // return {x, y};
   }
 
   function getClientCoordinate(sceneX, sceneY) {
@@ -184,6 +202,7 @@ function makeScene(canvas, options) {
   }
 
   function setViewBox(rect) {
+    debugger;
     panzoom.showRectangle(rect, {
       width: width,
       height: height
@@ -219,37 +238,47 @@ function makeScene(canvas, options) {
     sceneRoot.removeChild(child)
   }
 
-  function wglPanZoom(canvas, sceneRoot, scene) {
+  function wglPanZoom(canvas, drawContext, scene) {
+    var z = 1;
+    var fov = drawContext.fov;
     var controller = {
       applyTransform(newT) {
-        var transform = sceneRoot.transform;
-        var pixelRatio = scene.getPixelRatio();
+        z = 1 / newT.scale;
+        var zScale = 2 * Math.tan( fov / 2 ) * z
+        zScale = drawContext.height / ( zScale * scene.getPixelRatio());
 
-        transform.dx = newT.x * pixelRatio;
-        transform.dy = newT.y * pixelRatio;
-        transform.scale = newT.scale;
-        sceneRoot.worldTransformNeedsUpdate = true;
+        let dx = -newT.x / zScale;
+        let dy = newT.y / zScale;
+
+        drawContext.origin[0] = dx;
+        drawContext.origin[1] = dy;
+        drawContext.origin[2] = z;
+        mat4.lookAt(view, drawContext.origin, [dx, dy, 0], [0, 1, 0])
         scene.renderFrame()
       },
 
       getOwner() {
         return canvas
+      },
+
+      getScreenCTM() {
+        const dpr = 1/scene.getPixelRatio();
+        return {
+          a: 1,
+          d: 1,
+          e: dpr * drawContext.width / 2,
+          f: dpr * drawContext.height / 2
+        }
       }
     }
 
-    if (options.size){
-      controller.getScreenCTM = customSizeCTM;
+    function getCoord(t, x, y) {
+      return {
+        x: x * t.scale + t.x,
+        y: y * t.scale + t.y
+      }
     }
 
     return controller;
-
-    function customSizeCTM() {
-        return {
-          a: (options.size.width/canvas.offsetWidth), //scale x
-          d: (options.size.height/canvas.offsetHeight), //scale y
-          e: 0,
-          f: 0
-        }
-      }
   }
 }

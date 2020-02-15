@@ -7,18 +7,19 @@ import WireAccessor from './WireAccessor';
  * of resolution.
  */
 class WireCollection extends BaseLineCollection {
-  constructor(capacity) {
-    super(capacity, 4); // items per wire
-
+  constructor(capacity, options) {
+    var is3D = options && options.is3D;
+    super(capacity, is3D ? 6 : 4); // items per wire
+    this.is3D = is3D;
     this.type = 'WireCollection';
   }
 
   _makeProgram(gl) {
-    return makeLinesProgram(gl, this.buffer, /* drawTriangles = */ false);
+    return makeLinesProgram(gl, this.buffer, /* drawTriangles = */ false, this.is3D);
   }
 
   _addInternal(line, offset) {
-    let lineUI = new WireAccessor(this.buffer, offset);
+    let lineUI = new WireAccessor(this, offset);
     lineUI.update(line.from, line.to)
     return lineUI;
   }
