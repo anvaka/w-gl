@@ -30,7 +30,7 @@ class PointAccessor {
     points[offset] = point.x; offset++;
     points[offset] = point.y; offset++;
     if (this.is3D) {
-      points[offset] = point.z; offset++;
+      points[offset] = point.z || 0; offset++;
     }
     if (point.size || defaults) {
       points[offset] = typeof point.size === 'number' ? point.size : defaults.size;

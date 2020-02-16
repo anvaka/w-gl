@@ -6,6 +6,9 @@ import PointAccessor from './PointAccessor';
 
 class PointCollection extends Element {
   constructor(capacity, options) {
+    if (capacity === undefined) {
+      throw new Error('Point capacity should be defined');
+    }
     super();
     this.type = 'PointCollection';
 
