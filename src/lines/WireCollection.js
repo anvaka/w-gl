@@ -26,9 +26,9 @@ class WireCollection extends Element {
 
   draw(gl, drawContext) {
     if (!this._program) {
-      this._program = makeWireProgram(gl, this.positions, /* drawTriangles = */ false, this.is3D);
+      this._program = makeWireProgram(gl, this);
     }
-    this._program.draw(this, drawContext);
+    this._program.draw(drawContext);
   }
 
   add(line) {

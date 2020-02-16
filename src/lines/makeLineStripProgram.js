@@ -42,6 +42,7 @@ function makeLineProgram(gl, lineStripCollection) {
   }
 
   function draw(lineStripCollection, drawContext) {
+    // TODO: Why lineStripCollection passed second time?
     if (data.length === 0) return;
 
     gl.useProgram(lineProgram);
