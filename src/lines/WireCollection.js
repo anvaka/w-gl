@@ -1,5 +1,5 @@
 import Element from '../Element';
-import makeLinesProgram from './makeLinesProgram';
+import makeWireProgram from './makeWireProgram';
 import WireAccessor from './WireAccessor';
 import Color from '../Color';
 
@@ -26,7 +26,7 @@ class WireCollection extends Element {
 
   draw(gl, drawContext) {
     if (!this._program) {
-      this._program = makeLinesProgram(gl, this.positions, /* drawTriangles = */ false, this.is3D);
+      this._program = makeWireProgram(gl, this.positions, /* drawTriangles = */ false, this.is3D);
     }
     this._program.draw(this, drawContext);
   }
