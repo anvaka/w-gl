@@ -14,7 +14,7 @@ function makeLineProgram(gl, lineStripCollection) {
   let data = lineStripCollection.buffer;
 
   if (!lineProgram) {
-    const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors, is3D);
+    const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors);
     var lineVSShader = utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
     var lineFSShader = utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
     lineProgram = utils.link(gl, lineVSShader, lineFSShader);
@@ -23,7 +23,7 @@ function makeLineProgram(gl, lineStripCollection) {
 
   var locations = utils.getLocations(gl, lineProgram);
   let lineSize = is3D ? 3 : 2;
-  let lineStride = (lineSize + 1) * 4;
+  let coloredLineStride = (lineSize + 1) * 4;
   let colorOffset = lineSize * 4;
 
   var lineBuffer = gl.createBuffer();
@@ -64,7 +64,7 @@ function makeLineProgram(gl, lineStripCollection) {
         lineSize,
         gl.FLOAT,
         false,
-        lineStride,
+        coloredLineStride,
         0
       );
 
@@ -74,7 +74,7 @@ function makeLineProgram(gl, lineStripCollection) {
         4,
         gl.UNSIGNED_BYTE,
         true,
-        lineStride,
+        coloredLineStride,
         colorOffset
       );
     } else {

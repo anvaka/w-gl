@@ -128,8 +128,6 @@ function createCircleTexture(gl) {
       }
     }
     return blur(result, size)
-
-    //return result
   }
 }
 

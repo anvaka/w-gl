@@ -11,27 +11,43 @@ class WireAccessor {
   }
 
   update2D(from, to) {
-    var buffer = this._wire.positions;
+    var positions = this._wire.positions;
     var offset = this.offset;
 
-    buffer[offset + 0] = from.x
-    buffer[offset + 1] = from.y
+    positions[offset + 0] = from.x;
+    positions[offset + 1] = from.y;
+    offset += 2;
+    var hasColor = this._wire.allowColors;
+    if (hasColor && from.color) {
+      this._wire.colors[offset] = from.color;
+      offset += 1;
+    }
 
-    buffer[offset + 2] = to.x
-    buffer[offset + 3] = to.y
+    positions[offset + 0] = to.x
+    positions[offset + 1] = to.y
+    if (hasColor && to.color) {
+      this._wire.colors[offset + 2] = to.color;
+    }
   }
 
   update3D(from, to) {
-    var buffer = this._wire.positions;
+    var positions = this._wire.positions;
     var offset = this.offset;
 
-    buffer[offset + 0] = from.x
-    buffer[offset + 1] = from.y
-    buffer[offset + 2] = from.z || 0
+    positions[offset + 0] = from.x
+    positions[offset + 1] = from.y
+    positions[offset + 2] = from.z || 0
+    offset += 3;
+    var hasColor = this._wire.allowColors;
+    if (hasColor && from.color) {
+      this._wire.colors[offset] = from.color;
+      offset += 1;
+    }
 
-    buffer[offset + 3] = to.x
-    buffer[offset + 4] = to.y
-    buffer[offset + 5] = to.z || 0
+    positions[offset + 0] = to.x
+    positions[offset + 1] = to.y
+    positions[offset + 2] = to.z || 0
+    if (hasColor && to.color) this._wire.colors[offset + 3] = to.color;
   }
 }
 

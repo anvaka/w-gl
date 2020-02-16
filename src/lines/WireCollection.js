@@ -12,8 +12,10 @@ class WireCollection extends Element {
     super();
     let bytesPerElement = 4; // float32 or uint32 - both require 4 bytes
     this.is3D = options && options.is3D;
+    this.allowColors = options && options.allowColors;
     this.itemsPerLine = 4; // (startX, startY) (endX, endY);
     if (this.is3D) this.itemsPerLine += 2; // Add two more for Z;
+    if (this.allowColors) this.itemsPerLine += 2; // Add two more for color
 
     this.capacity = capacity;
     this.count = 0;
@@ -22,6 +24,11 @@ class WireCollection extends Element {
     this._program = null;
     this.buffer = new ArrayBuffer(capacity * this.itemsPerLine * bytesPerElement)
     this.positions = new Float32Array(this.buffer);
+
+    if (this.allowColors) {
+      // We are sharing the buffer!
+      this.colors = new Uint32Array(this.buffer);
+    }
   }
 
   draw(gl, drawContext) {
@@ -40,7 +47,7 @@ class WireCollection extends Element {
 
     var offset = this.count * this.itemsPerLine;
     let ui = new WireAccessor(this, offset);
-    ui.update(line.from, line.to)
+    ui.update(line.from, line.to, line.color)
 
     this.count += 1;
     return ui;
@@ -64,6 +71,9 @@ class WireCollection extends Element {
 
     this.buffer = buffer;
     this.positions = extendedArray;
+    if (this.allowColors) {
+      this.colors = new Uint32Array(buffer);
+    }
     this.capacity *= 2;
   }
 }
