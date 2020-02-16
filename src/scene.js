@@ -3,8 +3,7 @@ import eventify from 'ngraph.events';
 
 import Element from './Element';
 import onClap from './clap';
-import {mat4, vec3} from 'gl-matrix';
-
+import {mat4, vec4} from 'gl-matrix';
 export default makeScene;
 
 function makeScene(canvas, options) {
@@ -27,8 +26,10 @@ function makeScene(canvas, options) {
 
   var view = mat4.create();
   var camera = mat4.create();
-  var fov = Math.PI / 6;
-  mat4.perspective(camera, fov, window.innerWidth/window.innerHeight, 0);
+  var fov = options.fov === undefined ? Math.PI / 6 : options.fov;
+  var near = options.near === undefined ? 1e-5 : options.near;
+  var far = options.far === undefined ? Infinity : options.far;
+
   var drawContext = { 
     width: window.innerWidth,
     height: window.innerHeight,
@@ -153,7 +154,7 @@ function makeScene(canvas, options) {
     drawContext.width = width;
     drawContext.height = height;
     sceneRoot.worldTransformNeedsUpdate = true;
-    mat4.perspective(camera, fov, width/height, 0);
+    mat4.perspective(camera, fov, width/height, near, far);
     renderFrame();
   }
 
@@ -180,29 +181,32 @@ function makeScene(canvas, options) {
   }
 
   function getSceneCoordinate(clientX, clientY) {
-    // var t = mat4.invert(mat4.create(), sceneRoot.model);
-    let coord = vec3.transformMat4([], [clientX, clientY, 0], view);
-    return coord;
+    // TODO: This is not optimized by any means.
+    var dpr = api.getPixelRatio();
+    let clipSpaceX = (dpr * clientX / width) * 2 - 1;
+    let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
 
-    // var canvasX = clientX * pixelRatio;
-    // var canvasY = clientY * pixelRatio;
-    // var x = (canvasX - t.dx)/t.scale;
-    // var y = (canvasY - t.dy)/t.scale;
-
-    // return {x, y};
+    var mvp = mat4.multiply(mat4.create(), camera, view)
+    mat4.multiply(mvp, mvp, sceneRoot.model);
+    var zero = vec4.transformMat4([], [drawContext.origin[0], drawContext.origin[1], -drawContext.origin[2], 1], mvp);
+    // TODO: What if there is no invert matrix exist?
+    var iMvp = mat4.invert(mat4.create(), mvp);
+    return vec4.transformMat4([], [zero[3] * clipSpaceX, zero[3] * clipSpaceY, zero[2], zero[3]], iMvp);
   }
 
-  function getClientCoordinate(sceneX, sceneY) {
-    var t = sceneRoot.transform;
+  function getClientCoordinate(sceneX, sceneY, sceneZ = 0) {
+    // TODO: this is not optimized either.
+    var mvp = mat4.multiply(mat4.create(), camera, view)
+    mat4.multiply(mvp, mvp, sceneRoot.model);
+    var coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
 
-    var x = (sceneX * t.scale + t.dx)/pixelRatio;
-    var y = (sceneY * t.scale + t.dy)/pixelRatio;
-
-    return {x: x, y: y};
+    var dpr = api.getPixelRatio();
+    var x = width * (coordinate[0]/coordinate[3] + 1) * 0.5/dpr;
+    var y = height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5)/dpr;
+    return {x, y};
   }
 
   function setViewBox(rect) {
-    debugger;
     panzoom.showRectangle(rect, {
       width: width,
       height: height
@@ -269,13 +273,6 @@ function makeScene(canvas, options) {
           e: dpr * drawContext.width / 2,
           f: dpr * drawContext.height / 2
         }
-      }
-    }
-
-    function getCoord(t, x, y) {
-      return {
-        x: x * t.scale + t.x,
-        y: y * t.scale + t.y
       }
     }
 
