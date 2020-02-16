@@ -11,7 +11,7 @@ class WireAccessor {
   }
 
   update2D(from, to) {
-    var buffer = this._wire.buffer;
+    var buffer = this._wire.positions;
     var offset = this.offset;
 
     buffer[offset + 0] = from.x
@@ -22,7 +22,7 @@ class WireAccessor {
   }
 
   update3D(from, to) {
-    var buffer = this._wire.buffer;
+    var buffer = this._wire.positions;
     var offset = this.offset;
 
     buffer[offset + 0] = from.x

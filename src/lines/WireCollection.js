@@ -1,4 +1,3 @@
-import BaseLineCollection from './BaseLineCollection';
 import Element from '../Element';
 import makeLinesProgram from './makeLinesProgram';
 import WireAccessor from './WireAccessor';
@@ -21,13 +20,13 @@ class WireCollection extends Element {
     this.color = new Color(1, 1, 1, 1);
     this.type = 'WireCollection';
     this._program = null;
-    this.rawBuffer = new ArrayBuffer(capacity * this.itemsPerLine * bytesPerElement)
-    this.buffer = new Float32Array(this.rawBuffer);
+    this.buffer = new ArrayBuffer(capacity * this.itemsPerLine * bytesPerElement)
+    this.positions = new Float32Array(this.buffer);
   }
 
   draw(gl, drawContext) {
     if (!this._program) {
-      this._program = makeLinesProgram(gl, this.buffer, /* drawTriangles = */ false, this.is3D);
+      this._program = makeLinesProgram(gl, this.positions, /* drawTriangles = */ false, this.is3D);
     }
     this._program.draw(this, drawContext);
   }
@@ -57,14 +56,15 @@ class WireCollection extends Element {
   // TODO: Remove - it duplicates baseline collection 
   _extendArray() {
     // Every time we run out of space create new array twice bigger.
-    var newCapacity = this.capacity * this.itemsPerLine * 2;
-    var extendedArray = new Float32Array(newCapacity);
-    if (this.buffer) {
-      extendedArray.set(this.buffer);
+    var buffer = new ArrayBuffer(this.buffer.byteLength * 2);
+    var extendedArray = new Float32Array(buffer);
+    if (this.positions) {
+      extendedArray.set(this.positions);
     }
 
-    this.buffer = extendedArray;
-    this.capacity = newCapacity;
+    this.buffer = buffer;
+    this.positions = extendedArray;
+    this.capacity *= 2;
   }
 }
 
