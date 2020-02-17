@@ -60,7 +60,6 @@ class WireCollection extends Element {
     }
   }
 
-  // TODO: Remove - it duplicates baseline collection 
   _extendArray() {
     // Every time we run out of space create new array twice bigger.
     var buffer = new ArrayBuffer(this.buffer.byteLength * 2);

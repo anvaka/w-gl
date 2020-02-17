@@ -1,24 +1,22 @@
 import gl_utils from '../glUtils';
 import shaderGraph from '../shaderGraph/index.js';
-import panzoomVS from '../shaderGraph/panzoom.js';
+import createMultiKeyCache from './createMultiKeyCache';
 
-// TODO: this needs to be in a separate file, with proper resource management
-let lineProgramCache = new Map(); // maps from GL context to program
-
+let lineProgramCache = createMultiKeyCache();
 
 export default function makeWireProgram(gl, wireCollection) {
-  // TODO: this cache key is invalid for different settings of the is3D/allowColors
-  let lineProgram = lineProgramCache.get(gl)
+  let allowColors = !!wireCollection.allowColors;
+  let lineProgram = lineProgramCache.get([allowColors, gl])
+
   if (!lineProgram) {
-    const { lineFSSrc, lineVSSrc } = getShadersCode(wireCollection.allowColors);
+    const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors);
     var lineVSShader = gl_utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
     var lineFSShader = gl_utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
     lineProgram = gl_utils.link(gl, lineVSShader, lineFSShader);
-    lineProgramCache.set(gl, lineProgram);
+    lineProgramCache.set([allowColors, gl], lineProgram);
   }
 
   let locations = gl_utils.getLocations(gl, lineProgram);
-  let allowColors = wireCollection.allowColors;
 
   let lineBuffer = gl.createBuffer();
   let lineSize = wireCollection.is3D ? 3 : 2;

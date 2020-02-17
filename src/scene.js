@@ -176,8 +176,9 @@ function makeScene(canvas, options) {
     if (p) {
       api.fire('mousemove', {
         originalEvent: e,
-        sceneX: p.x,
-        sceneY: p.y,
+        x: p[0],
+        y: p[1],
+        z: p[2],
       });
     }
   }
@@ -191,7 +192,6 @@ function makeScene(canvas, options) {
     var mvp = mat4.multiply(mat4.create(), camera, view)
     mat4.multiply(mvp, mvp, sceneRoot.model);
     var zero = vec4.transformMat4([], [drawContext.origin[0], drawContext.origin[1], -drawContext.origin[2], 1], mvp);
-    // TODO: What if there is no invert matrix exist?
     var iMvp = mat4.invert(mat4.create(), mvp);
     if (!iMvp) {
       // likely they zoomed out too far for this `near` plane.

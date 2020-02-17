@@ -1,14 +1,16 @@
 import utils from '../glUtils';
 import shaderGraph from '../shaderGraph/index.js';
+import createMultiKeyCache from './createMultiKeyCache';
 
 export default makeLineProgram;
 
-let lineProgramCache = new Map();
+let lineProgramCache = createMultiKeyCache();
 
 function makeLineProgram(gl, lineStripCollection) {
-  // TODO: Cache on allow colors too
-  let lineProgram = lineProgramCache.get(gl);
   let {allowColors, is3D} = lineStripCollection;
+  allowColors = !!allowColors; // coerce to boolean.
+
+  let lineProgram = lineProgramCache.get([allowColors, gl]);
   const itemsPerVertex = 2 + (allowColors ? 1 : 0) + (is3D ? 1 : 0);
 
   let data = lineStripCollection.buffer;
@@ -18,7 +20,7 @@ function makeLineProgram(gl, lineStripCollection) {
     var lineVSShader = utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
     var lineFSShader = utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
     lineProgram = utils.link(gl, lineVSShader, lineFSShader);
-    lineProgramCache.set(gl, lineProgram);
+    lineProgramCache.set([allowColors, gl], lineProgram);
   }
 
   var locations = utils.getLocations(gl, lineProgram);
