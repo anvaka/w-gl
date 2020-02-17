@@ -213,12 +213,18 @@ function makeScene(canvas, options) {
   }
 
   function setViewBox(rect) {
-    panzoom.showRectangle(rect, {
-      width: width,
-      height: height
-    });
-    var newT = panzoom.getTransform();
-    wglController.applyTransform(newT);
+    const dx = (rect.left + rect.right)/2;
+    const dy = (rect.top + rect.bottom)/2;
+    const dpr = api.getPixelRatio();
+    const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
+    let zScale = drawContext.height / ( 2 * nearHeight * dpr);
+
+    // TODO: Probably best to open the API on panzoom end.
+    let t = panzoom.getTransform();
+    t.scale = Math.tan(fov / 2) / nearHeight;
+    t.x = -dx * zScale;
+    t.y = dy * zScale;
+    wglController.applyTransform(t);
   }
 
   function renderFrame(immediate) {
@@ -254,7 +260,7 @@ function makeScene(canvas, options) {
     var controller = {
       applyTransform(newT) {
         z = 1 / newT.scale;
-        var zScale = 2 * Math.tan( fov / 2 ) * z
+        let zScale = 2 * Math.tan( fov / 2 ) * z
         zScale = drawContext.height / ( zScale * scene.getPixelRatio());
 
         let dx = -newT.x / zScale;
