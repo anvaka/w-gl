@@ -173,11 +173,13 @@ function makeScene(canvas, options) {
 
   function onMouseMove(e) {
     var p = getSceneCoordinate(e.clientX, e.clientY);
-    api.fire('mousemove', {
-      originalEvent: e,
-      sceneX: p.x,
-      sceneY: p.y,
-    });
+    if (p) {
+      api.fire('mousemove', {
+        originalEvent: e,
+        sceneX: p.x,
+        sceneY: p.y,
+      });
+    }
   }
 
   function getSceneCoordinate(clientX, clientY) {
@@ -191,6 +193,10 @@ function makeScene(canvas, options) {
     var zero = vec4.transformMat4([], [drawContext.origin[0], drawContext.origin[1], -drawContext.origin[2], 1], mvp);
     // TODO: What if there is no invert matrix exist?
     var iMvp = mat4.invert(mat4.create(), mvp);
+    if (!iMvp) {
+      // likely they zoomed out too far for this `near` plane.
+      return;
+    }
     return vec4.transformMat4([], [zero[3] * clipSpaceX, zero[3] * clipSpaceY, zero[2], zero[3]], iMvp);
   }
 

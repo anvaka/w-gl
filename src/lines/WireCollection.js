@@ -47,7 +47,7 @@ class WireCollection extends Element {
 
     var offset = this.count * this.itemsPerLine;
     let ui = new WireAccessor(this, offset);
-    ui.update(line.from, line.to, line.color)
+    ui.update(line.from, line.to)
 
     this.count += 1;
     return ui;

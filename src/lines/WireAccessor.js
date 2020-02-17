@@ -18,8 +18,8 @@ class WireAccessor {
     positions[offset + 1] = from.y;
     offset += 2;
     var hasColor = this._wire.allowColors;
-    if (hasColor && from.color) {
-      this._wire.colors[offset] = from.color;
+    if (hasColor) {
+      if (from.color !== undefined) this._wire.colors[offset] = from.color;
       offset += 1;
     }
 
@@ -39,8 +39,8 @@ class WireAccessor {
     positions[offset + 2] = from.z || 0
     offset += 3;
     var hasColor = this._wire.allowColors;
-    if (hasColor && from.color) {
-      this._wire.colors[offset] = from.color;
+    if (hasColor) {
+      if (from.color !== undefined) this._wire.colors[offset] = from.color;
       offset += 1;
     }
 
