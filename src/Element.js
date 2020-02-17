@@ -1,17 +1,16 @@
-import Transform from './Transform';
-
+import {mat4} from 'gl-matrix';
 /**
  * represents a single element in the scene tree
  */
 class Element {
   constructor() {
     this.children = [];
-    this.transform = new Transform();
-
-    // Stores transformation to the "world" coordinates. If this element has
-    // no parent, this object is equal to `this.transform`
-    this.worldTransform = new Transform();
+    // Transforms local coordinate system to parent coordinate system
+    this.model = mat4.create();
+    // Cumulative transform to webgl coordinate system.
+    this.worldModel = mat4.create();
     this.worldTransformNeedsUpdate = true;
+
     this.type = 'Element';
     this.scene = null;
   }
@@ -46,6 +45,42 @@ class Element {
     if (exitCallback) exitCallback(this);
   }
 
+  rotate(rad, axis) {
+    mat4.rotate(this.model, this.model, rad, axis);
+    this.worldTransformNeedsUpdate = true;
+    return this;
+  }
+
+  rotateX(rad) {
+    mat4.rotateX(this.model, this.model, rad);
+    this.worldTransformNeedsUpdate = true;
+    return this;
+  }
+
+  rotateY(rad) {
+    mat4.rotateY(this.model, this.model, rad);
+    this.worldTransformNeedsUpdate = true;
+    return this;
+  }
+
+  rotateZ(rad) {
+    mat4.rotateZ(this.model, this.model, rad);
+    this.worldTransformNeedsUpdate = true;
+    return this;
+  }
+
+  scale(v) {
+    mat4.scale(this.model, this.model, v);
+    this.worldTransformNeedsUpdate = true;
+    return this;
+  }
+
+  translate(v) {
+    mat4.translate(this.model, this.model, v);
+    this.worldTransformNeedsUpdate = true;
+    return this;
+  }
+
   removeChild(child) {
     // TODO: should this be faster?
     let childIdx = this.children.indexOf(child);
@@ -58,10 +93,10 @@ class Element {
 
   updateWorldTransform(force) {
     if (this.worldTransformNeedsUpdate || force) {
-      if (!this.parent) {
-        this.transform.copyTo(this.worldTransform);
+      if (this.parent) {
+        mat4.multiply(this.worldModel, this.parent.worldModel, this.model);
       } else {
-        this.worldTransform.multiply(this.parent.worldTransform, this.transform)
+        mat4.copy(this.worldModel, this.model);
       }
 
       this.worldTransformNeedsUpdate = false;

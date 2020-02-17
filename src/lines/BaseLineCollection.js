@@ -13,13 +13,11 @@ class BaseLineCollection extends Element {
     this.buffer = new Float32Array(capacity * this.itemsPerLine);
   }
 
-  draw(gl, screen) {
+  draw(gl, drawContext) {
     if (!this._program) {
       this._program = this._makeProgram(gl);
     }
-    let transform = this.worldTransform;
-
-    this._program.draw(transform, this.color, screen);
+    this._program.draw(this, drawContext);
   }
 
   _makeProgram() {

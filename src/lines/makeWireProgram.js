@@ -1,39 +1,32 @@
-import utils from '../glUtils';
+import gl_utils from '../glUtils';
 import shaderGraph from '../shaderGraph/index.js';
 import createMultiKeyCache from './createMultiKeyCache';
 
-export default makeLineProgram;
-
 let lineProgramCache = createMultiKeyCache();
 
-function makeLineProgram(gl, lineStripCollection) {
-  let {allowColors, is3D} = lineStripCollection;
-  allowColors = !!allowColors; // coerce to boolean.
-
-  let lineProgram = lineProgramCache.get([allowColors, gl]);
-  const itemsPerVertex = 2 + (allowColors ? 1 : 0) + (is3D ? 1 : 0);
-
-  let data = lineStripCollection.buffer;
+export default function makeWireProgram(gl, wireCollection) {
+  let allowColors = !!wireCollection.allowColors;
+  let lineProgram = lineProgramCache.get([allowColors, gl])
 
   if (!lineProgram) {
     const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors);
-    var lineVSShader = utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
-    var lineFSShader = utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
-    lineProgram = utils.link(gl, lineVSShader, lineFSShader);
+    var lineVSShader = gl_utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
+    var lineFSShader = gl_utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
+    lineProgram = gl_utils.link(gl, lineVSShader, lineFSShader);
     lineProgramCache.set([allowColors, gl], lineProgram);
   }
 
-  var locations = utils.getLocations(gl, lineProgram);
-  let lineSize = is3D ? 3 : 2;
+  let locations = gl_utils.getLocations(gl, lineProgram);
+
+  let lineBuffer = gl.createBuffer();
+  let lineSize = wireCollection.is3D ? 3 : 2;
   let coloredLineStride = (lineSize + 1) * 4;
   let colorOffset = lineSize * 4;
-
-  var lineBuffer = gl.createBuffer();
 
   var api = {
     draw,
     dispose
-  };
+  }
 
   return api;
 
@@ -43,23 +36,26 @@ function makeLineProgram(gl, lineStripCollection) {
     lineProgramCache.delete(gl);
   }
 
-  function draw(lineStripCollection, drawContext) {
-    // TODO: Why lineStripCollection passed second time?
-    if (data.length === 0) return;
+  function draw(drawContext) {
+    if (wireCollection.count === 0) return;
+
+    let data = wireCollection.buffer;
 
     gl.useProgram(lineProgram);
 
-    gl.uniformMatrix4fv(locations.uniforms.uModel, false, lineStripCollection.worldModel);
+    gl.uniformMatrix4fv(locations.uniforms.uModel, false, wireCollection.worldModel);
     gl.uniformMatrix4fv(locations.uniforms.uCamera, false, drawContext.camera);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
     gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
 
-    let {color, nextElementIndex, madeFullCircle} = lineStripCollection;
+    var color = wireCollection.color;
     gl.uniform4f(locations.uniforms.uColor, color.r, color.g, color.b, color.a);
 
+    // TODO: Avoid buffering, if data hasn't changed?
     gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
-    gl.enableVertexAttribArray(locations.attributes.aPosition);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
+    gl.enableVertexAttribArray(locations.attributes.aPosition)
     if (allowColors) {
       gl.vertexAttribPointer(
         locations.attributes.aPosition,
@@ -80,23 +76,10 @@ function makeLineProgram(gl, lineStripCollection) {
         colorOffset
       );
     } else {
-      gl.vertexAttribPointer(
-        locations.attributes.aPosition,
-        lineSize,
-        gl.FLOAT,
-        false,
-        0,
-        0
-      );
+      gl.vertexAttribPointer(locations.attributes.aPosition, lineSize, gl.FLOAT, false, 4 * lineSize, 0)
     }
 
-    if (madeFullCircle) {
-      let elementsCount = data.byteLength / 4 / itemsPerVertex - nextElementIndex;
-      gl.drawArrays(gl.LINE_STRIP, nextElementIndex, elementsCount);
-      if (nextElementIndex > 1) gl.drawArrays(gl.LINE_STRIP, 0, nextElementIndex - 1);
-    } else {
-      gl.drawArrays(gl.LINE_STRIP, 1, nextElementIndex - 1);
-    }
+    gl.drawArrays(gl.LINES, 0, wireCollection.count * 2);
   }
 }
 

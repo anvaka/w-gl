@@ -3,13 +3,12 @@ import eventify from 'ngraph.events';
 
 import Element from './Element';
 import onClap from './clap';
-
+import {mat4, vec4} from 'gl-matrix';
 export default makeScene;
 
 function makeScene(canvas, options) {
   var width;
   var height;
-  var drawContext = { width: 0, height: 0 };
   var pixelRatio = window.devicePixelRatio;
   if (!options) options = {};
 
@@ -24,6 +23,22 @@ function makeScene(canvas, options) {
 
   var frameToken = 0;
   var sceneRoot = new Element();
+
+  var view = mat4.create();
+  var camera = mat4.create();
+  var fov = options.fov === undefined ? Math.PI / 6 : options.fov;
+  var near = options.near === undefined ? 1e-2 : options.near;
+  var far = options.far === undefined ? Infinity : options.far;
+
+  var drawContext = { 
+    width: window.innerWidth,
+    height: window.innerHeight,
+    camera,
+    view,
+    fov,
+    origin: new Float32Array(3)
+ };
+
   updateCanvasSize();
 
   var api = eventify({
@@ -46,7 +61,7 @@ function makeScene(canvas, options) {
     getPanzoom
   });
 
-  var wglController = wglPanZoom(canvas, sceneRoot, api);
+  var wglController = wglPanZoom(canvas, drawContext, api);
   canvas.style.outline = 'none';
   canvas.setAttribute('tabindex', 0);
 
@@ -85,7 +100,7 @@ function makeScene(canvas, options) {
   }
 
   function getTransform() {
-    return sceneRoot.transform;
+    return sceneRoot.model;
   }
 
   function setClearColor(r, g, b, a) {
@@ -139,6 +154,7 @@ function makeScene(canvas, options) {
     drawContext.width = width;
     drawContext.height = height;
     sceneRoot.worldTransformNeedsUpdate = true;
+    mat4.perspective(camera, fov, width/height, near, far);
     renderFrame();
   }
 
@@ -157,39 +173,58 @@ function makeScene(canvas, options) {
 
   function onMouseMove(e) {
     var p = getSceneCoordinate(e.clientX, e.clientY);
-    api.fire('mousemove', {
-      originalEvent: e,
-      sceneX: p.x,
-      sceneY: p.y,
-    });
+    if (p) {
+      api.fire('mousemove', {
+        originalEvent: e,
+        x: p[0],
+        y: p[1],
+        z: p[2],
+      });
+    }
   }
 
   function getSceneCoordinate(clientX, clientY) {
-    var t = sceneRoot.transform;
-    var canvasX = clientX * pixelRatio;
-    var canvasY = clientY * pixelRatio;
-    var x = (canvasX - t.dx)/t.scale;
-    var y = (canvasY - t.dy)/t.scale;
+    // TODO: This is not optimized by any means.
+    var dpr = api.getPixelRatio();
+    let clipSpaceX = (dpr * clientX / width) * 2 - 1;
+    let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
 
+    var mvp = mat4.multiply(mat4.create(), camera, view)
+    mat4.multiply(mvp, mvp, sceneRoot.model);
+    var zero = vec4.transformMat4([], [drawContext.origin[0], drawContext.origin[1], -drawContext.origin[2], 1], mvp);
+    var iMvp = mat4.invert(mat4.create(), mvp);
+    if (!iMvp) {
+      // likely they zoomed out too far for this `near` plane.
+      return;
+    }
+    return vec4.transformMat4([], [zero[3] * clipSpaceX, zero[3] * clipSpaceY, zero[2], zero[3]], iMvp);
+  }
+
+  function getClientCoordinate(sceneX, sceneY, sceneZ = 0) {
+    // TODO: this is not optimized either.
+    var mvp = mat4.multiply(mat4.create(), camera, view)
+    mat4.multiply(mvp, mvp, sceneRoot.model);
+    var coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
+
+    var dpr = api.getPixelRatio();
+    var x = width * (coordinate[0]/coordinate[3] + 1) * 0.5/dpr;
+    var y = height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5)/dpr;
     return {x, y};
   }
 
-  function getClientCoordinate(sceneX, sceneY) {
-    var t = sceneRoot.transform;
-
-    var x = (sceneX * t.scale + t.dx)/pixelRatio;
-    var y = (sceneY * t.scale + t.dy)/pixelRatio;
-
-    return {x: x, y: y};
-  }
-
   function setViewBox(rect) {
-    panzoom.showRectangle(rect, {
-      width: width,
-      height: height
-    });
-    var newT = panzoom.getTransform();
-    wglController.applyTransform(newT);
+    const dx = (rect.left + rect.right)/2;
+    const dy = (rect.top + rect.bottom)/2;
+    const dpr = api.getPixelRatio();
+    const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
+    let zScale = drawContext.height / ( 2 * nearHeight * dpr);
+
+    // TODO: Probably best to open the API on panzoom end.
+    let t = panzoom.getTransform();
+    t.scale = Math.tan(fov / 2) / nearHeight;
+    t.x = -dx * zScale;
+    t.y = dy * zScale;
+    wglController.applyTransform(t);
   }
 
   function renderFrame(immediate) {
@@ -219,37 +254,40 @@ function makeScene(canvas, options) {
     sceneRoot.removeChild(child)
   }
 
-  function wglPanZoom(canvas, sceneRoot, scene) {
+  function wglPanZoom(canvas, drawContext, scene) {
+    var z = 1;
+    var fov = drawContext.fov;
     var controller = {
       applyTransform(newT) {
-        var transform = sceneRoot.transform;
-        var pixelRatio = scene.getPixelRatio();
+        z = 1 / newT.scale;
+        let zScale = 2 * Math.tan( fov / 2 ) * z
+        zScale = drawContext.height / ( zScale * scene.getPixelRatio());
 
-        transform.dx = newT.x * pixelRatio;
-        transform.dy = newT.y * pixelRatio;
-        transform.scale = newT.scale;
-        sceneRoot.worldTransformNeedsUpdate = true;
+        let dx = -newT.x / zScale;
+        let dy = newT.y / zScale;
+
+        drawContext.origin[0] = dx;
+        drawContext.origin[1] = dy;
+        drawContext.origin[2] = z;
+        mat4.lookAt(view, drawContext.origin, [dx, dy, 0], [0, 1, 0])
         scene.renderFrame()
       },
 
       getOwner() {
         return canvas
-      }
-    }
+      },
 
-    if (options.size){
-      controller.getScreenCTM = customSizeCTM;
+      getScreenCTM() {
+        const dpr = 1/scene.getPixelRatio();
+        return {
+          a: 1,
+          d: 1,
+          e: dpr * drawContext.width / 2,
+          f: dpr * drawContext.height / 2
+        }
+      }
     }
 
     return controller;
-
-    function customSizeCTM() {
-        return {
-          a: (options.size.width/canvas.offsetWidth), //scale x
-          d: (options.size.height/canvas.offsetHeight), //scale y
-          e: 0,
-          f: 0
-        }
-      }
   }
 }
