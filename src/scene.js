@@ -51,6 +51,7 @@ function makeScene(canvas, options) {
     removeChild,
     setViewBox,
     setClearColor,
+    getClearColor,
     clear,
     dispose,
     renderFrame,
@@ -58,7 +59,8 @@ function makeScene(canvas, options) {
     getPixelRatio,
     setPixelRatio,
 
-    getPanzoom
+    getPanzoom,
+    getDrawContext
   });
 
   var wglController = wglPanZoom(canvas, drawContext, api);
@@ -80,6 +82,10 @@ function makeScene(canvas, options) {
 
   function getPixelRatio() {
     return pixelRatio;
+  }
+
+  function getDrawContext() {
+    return drawContext;
   }
 
   function setPixelRatio(newPixelRatio) {
@@ -105,6 +111,11 @@ function makeScene(canvas, options) {
 
   function setClearColor(r, g, b, a) {
     gl.clearColor(r, g, b, a)
+  }
+
+  function getClearColor() {
+    // [r, g, b, a]
+    return gl.getParameter(gl.COLOR_CLEAR_VALUE);
   }
 
   function listenToEvents() {
