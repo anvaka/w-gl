@@ -48,36 +48,42 @@ class Element {
   rotate(rad, axis) {
     mat4.rotate(this.model, this.model, rad, axis);
     this.worldTransformNeedsUpdate = true;
+    if (this.scene) this.scene.renderFrame();
     return this;
   }
 
   rotateX(rad) {
     mat4.rotateX(this.model, this.model, rad);
     this.worldTransformNeedsUpdate = true;
+    if (this.scene) this.scene.renderFrame();
     return this;
   }
 
   rotateY(rad) {
     mat4.rotateY(this.model, this.model, rad);
     this.worldTransformNeedsUpdate = true;
+    if (this.scene) this.scene.renderFrame();
     return this;
   }
 
   rotateZ(rad) {
     mat4.rotateZ(this.model, this.model, rad);
     this.worldTransformNeedsUpdate = true;
+    if (this.scene) this.scene.renderFrame();
     return this;
   }
 
   scale(v) {
     mat4.scale(this.model, this.model, v);
     this.worldTransformNeedsUpdate = true;
+    if (this.scene) this.scene.renderFrame();
     return this;
   }
 
   translate(v) {
     mat4.translate(this.model, this.model, v);
     this.worldTransformNeedsUpdate = true;
+    if (this.scene) this.scene.renderFrame();
     return this;
   }
 
