@@ -10,7 +10,8 @@ function makeLineProgram(gl, lineStripCollection) {
   let {allowColors, is3D} = lineStripCollection;
   allowColors = !!allowColors; // coerce to boolean.
 
-  let lineProgram = lineProgramCache.get([allowColors, gl]);
+  const programKey = [allowColors, gl];
+  let lineProgram = lineProgramCache.get(programKey);
   const itemsPerVertex = 2 + (allowColors ? 1 : 0) + (is3D ? 1 : 0);
 
   let data = lineStripCollection.buffer;
@@ -20,7 +21,7 @@ function makeLineProgram(gl, lineStripCollection) {
     var lineVSShader = utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
     var lineFSShader = utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
     lineProgram = utils.link(gl, lineVSShader, lineFSShader);
-    lineProgramCache.set([allowColors, gl], lineProgram);
+    lineProgramCache.set(programKey, lineProgram);
   }
 
   var locations = utils.getLocations(gl, lineProgram);
@@ -40,7 +41,7 @@ function makeLineProgram(gl, lineStripCollection) {
   function dispose() {
     gl.deleteBuffer(lineBuffer);
     gl.deleteProgram(lineProgram);
-    lineProgramCache.delete(gl);
+    lineProgramCache.remove(programKey);
   }
 
   function draw(lineStripCollection, drawContext) {

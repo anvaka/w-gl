@@ -5,7 +5,8 @@ export default function createMultiKeyCache() {
   let cache = new Map();
   return {
     get,
-    set
+    set,
+    remove
   };
 
   function get(keys) {
@@ -33,5 +34,17 @@ export default function createMultiKeyCache() {
       lastCache = entry;
     }
     lastCache.set(keys[keys.length - 1], value);
+  }
+
+  function remove(keys) {
+    let lastCache = cache;
+    for (let i = 0; i < keys.length - 1; ++i) {
+      let key = keys[i];
+      let entry = lastCache.get(key);
+      if (!entry) return;
+      lastCache = entry;
+    }
+    lastCache.delete(keys[keys.length - 1]);
+    // TODO: Might also want to remove parent elements if this was the last entity.
   }
 }

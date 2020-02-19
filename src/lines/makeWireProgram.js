@@ -6,14 +6,15 @@ let lineProgramCache = createMultiKeyCache();
 
 export default function makeWireProgram(gl, wireCollection) {
   let allowColors = !!wireCollection.allowColors;
-  let lineProgram = lineProgramCache.get([allowColors, gl])
+  let programKey = [allowColors, gl];
+  let lineProgram = lineProgramCache.get(programKey)
 
   if (!lineProgram) {
     const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors);
     var lineVSShader = gl_utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
     var lineFSShader = gl_utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
     lineProgram = gl_utils.link(gl, lineVSShader, lineFSShader);
-    lineProgramCache.set([allowColors, gl], lineProgram);
+    lineProgramCache.set(programKey, lineProgram);
   }
 
   let locations = gl_utils.getLocations(gl, lineProgram);
@@ -33,7 +34,7 @@ export default function makeWireProgram(gl, wireCollection) {
   function dispose() {
     gl.deleteBuffer(lineBuffer);
     gl.deleteProgram(lineProgram);
-    lineProgramCache.delete(gl);
+    lineProgramCache.remove(programKey);
   }
 
   function draw(drawContext) {
