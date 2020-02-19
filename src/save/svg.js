@@ -93,7 +93,6 @@ function wireRenderer(element, context) {
 
   if (elementGraph.getLinksCount() === 0) return; // all outside
 
-      // context.write(`<line x1="${f.x}" y1="${f.y}" x2="${t.x}" y2="${t.y}" stroke='${stroke}'/>`)
   const strokeColor = toHexColor(getColor(element));
   const strokeWidth = 1 / element.scene.getPixelRatio();
   let style = `fill="none" stroke-width="${strokeWidth}" stroke="${strokeColor}"`
@@ -104,12 +103,19 @@ function wireRenderer(element, context) {
   let lastNode = null;
   let lastPath = null;
   globalOrder.forEach(link => {
-    if (link.from !== lastNode) {
-      commitLastPath();
-      lastPath = [];
+    let {from, to} = link;
+    if (from !== lastNode) {
+      if (to === lastNode) {
+          let temp = from;
+          from = to;
+          to = temp;
+      } else {
+        commitLastPath();
+        lastPath = [];
+      }
     }
-    lastPath.push(elementGraph.getNode(link.from).data, elementGraph.getNode(link.to).data);
-    lastNode = link.to;
+    lastPath.push(from, to);
+    lastNode = to;
   });
   commitLastPath();
 
@@ -117,10 +123,12 @@ function wireRenderer(element, context) {
 
   function commitLastPath() {
     if (!lastPath) return;
+    lastPath = lastPath.map(x => elementGraph.getNode(x).data);
     let d = `M${lastPath[0].x} ${lastPath[0].y} L` + lastPath.slice(1).map(p => `${p.x} ${p.y}`).join(',');
     context.write(`<path d="${d}"/>`)
   }
 }
+
 function getGlobalOrder(graph) {
   let visited = new Set();
   let globalOrder = [];
@@ -132,7 +140,7 @@ function getGlobalOrder(graph) {
     runDFS();
   });
 
-  return globalOrder
+  return globalOrder;
 
   function runDFS() {
     while (stack.length) {

@@ -1,6 +1,6 @@
 ## todo
 
-* Export to SVG
+* Game camera
 * Point cloud refactor (optimize colors)
 * Polygons
 * Hit test
@@ -8,4 +8,4 @@
 * Tree-shake friendly
 * Render to canvas
 * Thick lines
-* Game camera
+* Export to SVG (done for wires. left line strip and points)
