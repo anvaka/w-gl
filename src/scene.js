@@ -1,9 +1,9 @@
-import makePanzoom from 'panzoom';
 import eventify from 'ngraph.events';
 
 import Element from './Element';
 import onClap from './clap';
 import {mat4, vec4} from 'gl-matrix';
+import createMapCamera from './createMapCamera';
 export default makeScene;
 
 function makeScene(canvas, options) {
@@ -33,6 +33,7 @@ function makeScene(canvas, options) {
   var drawContext = { 
     width: window.innerWidth,
     height: window.innerHeight,
+    canvas,
     camera,
     view,
     fov,
@@ -63,15 +64,9 @@ function makeScene(canvas, options) {
     getDrawContext
   });
 
-  var wglController = wglPanZoom(canvas, drawContext, api);
-  canvas.style.outline = 'none';
-  canvas.setAttribute('tabindex', 0);
-
-  var panzoom = makePanzoom(canvas, {
-    controller: wglController
-  });
 
   sceneRoot.bindScene(api);
+  let cameraController = createMapCamera(api, drawContext);
 
   var disposeClick;
   listenToEvents();
@@ -102,7 +97,9 @@ function makeScene(canvas, options) {
   }
 
   function getPanzoom() {
-    return panzoom;
+    // todo: will be gone
+    console.warn('getPanzoom is going to be deprecated')
+    return cameraController.getPanzoom();
   }
 
   function getTransform() {
@@ -121,8 +118,6 @@ function makeScene(canvas, options) {
   function listenToEvents() {
     canvas.addEventListener('mousemove', onMouseMove);
 
-    panzoom.on('transform', onTransform);
-
     disposeClick = onClap(canvas, onMouseClick, this);
 
     window.addEventListener('resize', onResize, true);
@@ -131,13 +126,12 @@ function makeScene(canvas, options) {
   function dispose() {
     canvas.removeEventListener('mousemove', onMouseMove);
 
-    panzoom.off('transform', onTransform);
 
     if (disposeClick) disposeClick();
 
     window.removeEventListener('resize', onResize, true);
 
-    panzoom.dispose();
+    cameraController.dispose();
     sceneRoot.dispose();
 
     if (frameToken) {
@@ -167,10 +161,6 @@ function makeScene(canvas, options) {
     sceneRoot.worldTransformNeedsUpdate = true;
     mat4.perspective(camera, fov, width/height, near, far);
     renderFrame();
-  }
-
-  function onTransform(e) {
-    api.fire('transform', e);
   }
 
   function onMouseClick(e) {
@@ -225,18 +215,7 @@ function makeScene(canvas, options) {
   }
 
   function setViewBox(rect) {
-    const dx = (rect.left + rect.right)/2;
-    const dy = (rect.top + rect.bottom)/2;
-    const dpr = api.getPixelRatio();
-    const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
-    let zScale = drawContext.height / ( 2 * nearHeight * dpr);
-
-    // TODO: Probably best to open the API on panzoom end.
-    let t = panzoom.getTransform();
-    t.scale = Math.tan(fov / 2) / nearHeight;
-    t.x = -dx * zScale;
-    t.y = dy * zScale;
-    wglController.applyTransform(t);
+    cameraController.setViewBox(rect);
   }
 
   function renderFrame(immediate) {
@@ -264,42 +243,5 @@ function makeScene(canvas, options) {
 
   function removeChild(child) {
     sceneRoot.removeChild(child)
-  }
-
-  function wglPanZoom(canvas, drawContext, scene) {
-    var z = 1;
-    var fov = drawContext.fov;
-    var controller = {
-      applyTransform(newT) {
-        z = 1 / newT.scale;
-        let zScale = 2 * Math.tan( fov / 2 ) * z
-        zScale = drawContext.height / ( zScale * scene.getPixelRatio());
-
-        let dx = -newT.x / zScale;
-        let dy = newT.y / zScale;
-
-        drawContext.origin[0] = dx;
-        drawContext.origin[1] = dy;
-        drawContext.origin[2] = z;
-        mat4.lookAt(view, drawContext.origin, [dx, dy, 0], [0, 1, 0])
-        scene.renderFrame()
-      },
-
-      getOwner() {
-        return canvas
-      },
-
-      getScreenCTM() {
-        const dpr = 1/scene.getPixelRatio();
-        return {
-          a: 1,
-          d: 1,
-          e: dpr * drawContext.width / 2,
-          f: dpr * drawContext.height / 2
-        }
-      }
-    }
-
-    return controller;
   }
 }
