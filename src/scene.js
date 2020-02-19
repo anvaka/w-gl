@@ -175,6 +175,7 @@ function makeScene(canvas, options) {
 
   function onMouseClick(e) {
     var p = getSceneCoordinate(e.clientX, e.clientY);
+    if (!p) return; // need to zoom in!
     api.fire('click', {
       originalEvent: e,
       sceneX: p.x,
@@ -184,14 +185,14 @@ function makeScene(canvas, options) {
 
   function onMouseMove(e) {
     var p = getSceneCoordinate(e.clientX, e.clientY);
-    if (p) {
-      api.fire('mousemove', {
-        originalEvent: e,
-        x: p[0],
-        y: p[1],
-        z: p[2],
-      });
-    }
+    if (!p) return;
+
+    api.fire('mousemove', {
+      originalEvent: e,
+      x: p[0],
+      y: p[1],
+      z: p[2],
+    });
   }
 
   function getSceneCoordinate(clientX, clientY) {
