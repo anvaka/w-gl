@@ -9,3 +9,4 @@ export {default as LineStripCollection} from './src/lines/LineStripCollection';
 export {default as Element} from './src/Element';
 export {default as isWebGLEnabled} from './src/isWebGLEnabled';
 export {default as utils} from './src/glUtils';
+export {default as toSVG} from './src/save/svg';

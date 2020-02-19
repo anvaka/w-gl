@@ -53,6 +53,57 @@ class WireCollection extends Element {
     return ui;
   }
 
+  forEachLine(callback) {
+    const {positions, count, itemsPerLine, allowColors} = this;
+    let maxOffset = count * itemsPerLine;
+
+    if (this.is3D) {
+      for (let i = 0; i < maxOffset; i += itemsPerLine) {
+        let from = {
+          x: positions[i],
+          y: positions[i + 1],
+          z: positions[i + 2]
+        }
+        let next = i + 3;
+        if (allowColors) {
+          from.color = this.colors[i + 3];
+          next += 1;
+        }
+        let to = {
+          x: positions[next],
+          y: positions[next + 1],
+          z: positions[next + 2]
+        };
+        if (allowColors) {
+          to.color = this.colors[next + 3];
+        }
+        callback(from, to);
+      }
+    } else {
+      for (let i = 0; i < maxOffset; i += itemsPerLine) {
+        let from = {
+          x: positions[i],
+          y: positions[i + 1],
+          z: 0,
+        }
+        let next = i + 2;
+        if (allowColors) {
+          from.color = this.colors[i + 2];
+          next += 1;
+        }
+        let to = {
+          x: positions[next],
+          y: positions[next + 1],
+          z: 0,
+        };
+        if (allowColors) {
+          to.color = this.colors[next + 2];
+        }
+        callback(from, to);
+      }
+    }
+  }
+
   dispose() {
     if (this._program) {
       this._program.dispose();
