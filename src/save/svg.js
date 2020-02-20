@@ -80,6 +80,7 @@ function wireRenderer(element, context) {
   element.forEachLine((from, to) => {
     let f = project(from.x, from.y, from.z);
     let t = project(to.x, to.y, to.z);
+    if (f.isBehind || t.isBehind) return; // Not quite accurate.
     if (clipToViewPort(f, t, context.width, context.height)) {
       let stroke = toHexColor(getColor(element, from, to))
       let fromId = `${f.x}|${f.y}`;
@@ -213,7 +214,7 @@ function getProjector(element, context) {
     const coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
     var x = Math.round(width * (coordinate[0]/coordinate[3] + 1) * 0.5);
     var y = Math.round(height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5));
-    return {x, y};
+    return {x, y, isBehind: coordinate[3] <= 0};
   }
 }
 
