@@ -4,9 +4,9 @@ import Element from './Element';
 import onClap from './clap';
 import {mat4, vec4} from 'gl-matrix';
 import createMapCamera from './createMapCamera';
-export default makeScene;
+import createGameCamera from './createGameCamera';
 
-function makeScene(canvas, options) {
+export default function makeScene(canvas, options) {
   var width;
   var height;
   var pixelRatio = window.devicePixelRatio;
@@ -60,13 +60,14 @@ function makeScene(canvas, options) {
     getPixelRatio,
     setPixelRatio,
 
-    getPanzoom,
+    getCamera,
     getDrawContext
   });
 
 
   sceneRoot.bindScene(api);
   let cameraController = createMapCamera(api, drawContext);
+  //let cameraController = createGameCamera(api, drawContext); 
 
   var disposeClick;
   listenToEvents();
@@ -96,10 +97,8 @@ function makeScene(canvas, options) {
     return sceneRoot;
   }
 
-  function getPanzoom() {
-    // todo: will be gone
-    console.warn('getPanzoom is going to be deprecated')
-    return cameraController.getPanzoom();
+  function getCamera() {
+    return cameraController;
   }
 
   function getTransform() {

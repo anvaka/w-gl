@@ -11,7 +11,10 @@ export default function createMapCamera(scene, drawContext) {
   const api = ({
     dispose,
     setViewBox,
-    getPanzoom() { return panzoom; }
+    getPanzoom() { return panzoom; },
+    setSpeed(speed) {
+      panzoom.setZoomSpeed(speed);
+    }
   });
 
   const panzoom = makePanzoom(canvas, {
@@ -40,7 +43,7 @@ export default function createMapCamera(scene, drawContext) {
   }
 }
 
-function wglPanZoom(scene, drawContext, api) {
+function wglPanZoom(scene, drawContext) {
     var z = 1;
     var fov = drawContext.fov;
     var controller = {
@@ -55,8 +58,8 @@ function wglPanZoom(scene, drawContext, api) {
         drawContext.origin[0] = dx;
         drawContext.origin[1] = dy;
         drawContext.origin[2] = z;
+        scene.fire('transform', drawContext);
         mat4.lookAt(drawContext.view, drawContext.origin, [dx, dy, 0], [0, 1, 0]);
-        scene.fire('transform');
         scene.renderFrame()
       },
 
