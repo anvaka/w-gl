@@ -4,7 +4,6 @@ import Element from './Element';
 import onClap from './clap';
 import {mat4, vec4} from 'gl-matrix';
 import createMapCamera from './createMapCamera';
-import createGameCamera from './createGameCamera';
 
 export default function makeScene(canvas, options) {
   var width;
@@ -66,8 +65,7 @@ export default function makeScene(canvas, options) {
 
 
   sceneRoot.bindScene(api);
-  let cameraController = createMapCamera(api, drawContext);
-  //let cameraController = createGameCamera(api, drawContext); 
+  let cameraController = (options.camera || createMapCamera)(api, drawContext);
 
   var disposeClick;
   listenToEvents();
