@@ -9,10 +9,10 @@ function onClap(element, callback, ctx) {
   var touchStartTime = new Date();
   var startPos
 
-  element.addEventListener('click', invokeHandler)
+  element.addEventListener('click', invokeHandler, {passive: false})
 
-  element.addEventListener('touchend', handleTouchEnd)
-  element.addEventListener('touchstart', handleTouchStart)
+  element.addEventListener('touchend', handleTouchEnd, {passive: false})
+  element.addEventListener('touchstart', handleTouchStart, {passive: false})
 
   return disposePrevHandler;
 
