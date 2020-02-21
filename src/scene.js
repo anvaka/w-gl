@@ -61,6 +61,7 @@ export default function makeScene(canvas, options) {
     setPixelRatio,
 
     getCamera,
+    setCamera,
     getDrawContext
   });
 
@@ -94,6 +95,13 @@ export default function makeScene(canvas, options) {
 
   function getRoot() {
     return sceneRoot;
+  }
+
+  function setCamera(createCamera) {
+    if (cameraController) {
+      cameraController.dispose();
+    }
+    cameraController = createCamera(api, drawContext);
   }
 
   function getCamera() {
