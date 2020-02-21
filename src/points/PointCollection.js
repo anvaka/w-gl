@@ -1,37 +1,39 @@
 
-import makeNodeProgram from './makePointsProgram';
+import makePointsProgram from './makePointsProgram';
 import Element from '../Element';
 import Color from '../Color';
 import PointAccessor from './PointAccessor';
 
-class PointCollection extends Element {
+export default class PointCollection extends Element {
   constructor(capacity, options) {
     if (capacity === undefined) {
       throw new Error('Point capacity should be defined');
     }
     super();
-    this.type = 'PointCollection';
-
-    // TODO: Not sure I like this too much. But otherwise how can I track interactivity?
-    this.pointsAccessor = [];
     this.is3D = options && options.is3D;
-    // x, y, size, r, g, b
-    this.itemsPerPoint = this.is3D ? 7 : 6; // TODO: Clamp color;
+    this.allowColors = options && options.allowColors;
+    
+    this.itemsPerPoint = 3; // (x, y, size)
+    if (this.is3D) this.itemsPerPoint += 1;
+    if (this.allowColors) this.itemsPerPoint += 1;
 
     this.capacity = capacity;
-    this.pointsBuffer = new Float32Array(capacity * this.itemsPerPoint);
     this.count = 0;
-    this._program = null;
     this.color = new Color(1, 1, 1, 1);
-    this.size = 1;
+    this._program = null;
+    this.buffer = new ArrayBuffer(capacity * this.itemsPerPoint * 4);
+    this.positions = new Float32Array(this.buffer);
+    if (this.allowColors) {
+      this.colors = new Uint32Array(this.buffer);
+    }
   }
 
   draw(gl, drawContext) {
     if (!this._program) {
-      this._program = makeNodeProgram(gl, this.pointsBuffer);
+      this._program = makePointsProgram(gl, this);
     }
 
-    this._program.draw(this, drawContext);
+    this._program.draw(drawContext);
   }
 
   dispose() {
@@ -47,26 +49,28 @@ class PointCollection extends Element {
     if (this.count >= this.capacity)  {
       this._extendArray();
     }
-    let pointsBuffer = this.pointsBuffer;
-    let offset = this.count * this.itemsPerPoint;
-    let pointAccessor = new PointAccessor(pointsBuffer, offset, point.color || this.color, data, this.is3D);
 
-    this.pointsAccessor.push(pointAccessor);
-
-    pointAccessor.update(point, this)
+    var offset = this.count * this.itemsPerPoint;
+    let ui = new PointAccessor(this, offset, data);
+    ui.update(point)
 
     this.count += 1;
-    return pointAccessor
+    return ui;
   }
 
   _extendArray() {
-    // This is because we would have to track every created point accessor
-    // TODO: Whelp, a week older you thinks that we should be tracking the points
-    // for interactivity... So, might as well implement this stuff. Remember anything
-    // about premature optimization?
-    // (2 years later:) Lol, dude you are talking with yourself :D
-    throw new Error('Cannot extend array at the moment :(')
+    // Every time we run out of space create new array twice bigger.
+    var buffer = new ArrayBuffer(this.buffer.byteLength * 2);
+    var extendedArray = new Float32Array(buffer);
+    if (this.positions) {
+      extendedArray.set(this.positions);
+    }
+
+    this.buffer = buffer;
+    this.positions = extendedArray;
+    if (this.allowColors) {
+      this.colors = new Uint32Array(buffer);
+    }
+    this.capacity *= 2;
   }
 }
-
-export default PointCollection;
