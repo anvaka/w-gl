@@ -4,10 +4,10 @@ export default function createGameCamera(scene, drawContext) {
   let moveSpeed = 0.1;
   let rotateSpeed =  Math.PI/180;
   let speedFactor = 1;
-  let norm = [0, 1, 0];
   let origin = drawContext.origin;
+  let norm = [0, 1, 0];
   let direction = [0, 0, -1];
-  let center = [0, 0, 0];
+  let center = drawContext.center;
 
   let dx = 0, dy = 0, dz = 0;
   let roll = 0, yaw = 0, pitch = 0;

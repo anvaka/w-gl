@@ -36,6 +36,7 @@ export default function makeScene(canvas, options) {
     camera,
     view,
     fov,
+    center: [0, 0, 0],
     origin: new Float32Array(3)
  };
 
@@ -163,6 +164,7 @@ export default function makeScene(canvas, options) {
   function onMouseClick(e) {
     var p = getSceneCoordinate(e.clientX, e.clientY);
     if (!p) return; // need to zoom in!
+
     api.fire('click', {
       originalEvent: e,
       sceneX: p.x,
@@ -176,9 +178,9 @@ export default function makeScene(canvas, options) {
 
     api.fire('mousemove', {
       originalEvent: e,
-      x: p[0],
-      y: p[1],
-      z: p[2],
+      x: p.x,
+      y: p.y,
+      z: p.z,
     });
   }
 
@@ -190,13 +192,19 @@ export default function makeScene(canvas, options) {
 
     var mvp = mat4.multiply(mat4.create(), camera, view)
     mat4.multiply(mvp, mvp, sceneRoot.model);
-    var zero = vec4.transformMat4([], [drawContext.origin[0], drawContext.origin[1], -drawContext.origin[2], 1], mvp);
+    // TODO: This wouldn't work when camera is rotated.
+    var zero = vec4.transformMat4([], [drawContext.center[0], drawContext.center[1], drawContext.center[2], 1], mvp);
     var iMvp = mat4.invert(mat4.create(), mvp);
     if (!iMvp) {
       // likely they zoomed out too far for this `near` plane.
       return;
     }
-    return vec4.transformMat4([], [zero[3] * clipSpaceX, zero[3] * clipSpaceY, zero[2], zero[3]], iMvp);
+    const sceneCoordinate =  vec4.transformMat4([], [zero[3] * clipSpaceX, zero[3] * clipSpaceY, zero[2], zero[3]], iMvp);
+    return {
+      x: sceneCoordinate[0]/sceneCoordinate[3],
+      y: sceneCoordinate[1]/sceneCoordinate[3],
+      z: sceneCoordinate[2]/sceneCoordinate[3],
+    }
   }
 
   function getClientCoordinate(sceneX, sceneY, sceneZ = 0) {

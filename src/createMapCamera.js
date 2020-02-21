@@ -55,11 +55,16 @@ function wglPanZoom(scene, drawContext) {
         let dx = -newT.x / zScale;
         let dy = newT.y / zScale;
 
+
         drawContext.origin[0] = dx;
         drawContext.origin[1] = dy;
         drawContext.origin[2] = z;
+        drawContext.center[0] = dx;
+        drawContext.center[1] = dy;
+        drawContext.center[2] = 0;
+
         scene.fire('transform', drawContext);
-        mat4.lookAt(drawContext.view, drawContext.origin, [dx, dy, 0], [0, 1, 0]);
+        mat4.lookAt(drawContext.view, drawContext.origin, drawContext.center, [0, 1, 0]);
         scene.renderFrame()
       },
 
