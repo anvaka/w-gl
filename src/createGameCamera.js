@@ -4,6 +4,38 @@ export default function createGameCamera(scene, drawContext) {
   let moveSpeed = 0.1;
   let rotateSpeed =  Math.PI/180;
   let speedFactor = 1;
+  let norm = [0, 1, 0];
+  let origin = drawContext.origin;
+  let direction = [0, 0, -1];
+  let center = [0, 0, 0];
+
+  let dx = 0, dy = 0, dz = 0;
+  let roll = 0, yaw = 0, pitch = 0;
+
+  // Note: I think using second order control here would result in more natural
+  // movement. E.g. change velocity instead of changing the position.
+  let keymap = {
+    // general movement
+    87: function(isUp /*, e */) { dz =     isUp; }, // w
+    65: function(isUp /*, e */) { dx =    -isUp; }, // a
+    83: function(isUp /*, e */) { dz =    -isUp; }, // s
+    68: function(isUp /*, e */) { dx =     isUp; }, // d - left
+    82: function(isUp /*, e */) { dy =     isUp; }, // r - up
+    70: function(isUp /*, e */) { dy =    -isUp; }, // f - down
+    69: function(isUp /*, e */) { roll =   isUp; }, // e - roll left
+    81: function(isUp /*, e */) { roll =  -isUp; }, // q - roll right
+    39: function(isUp /*, e */) { yaw  =  -isUp; }, // yaw right 
+    37: function(isUp /*, e */) { yaw  =   isUp; }, // yaw left
+    38: function(isUp /*, e */) { pitch =  isUp; }, // j - up
+    40: function(isUp /*, e */) { pitch = -isUp; }, // k - down
+    // speed
+    90: function(isUp) {                            // z slow down
+      if (isUp) speedFactor *= 0.9;
+    },
+    88: function(isUp) {                            // x - speed up
+      if (isUp) speedFactor *= 1.1;
+    }
+  };
 
   const api = {
     dispose,
@@ -16,14 +48,6 @@ export default function createGameCamera(scene, drawContext) {
       speedFactor = factor;
     }
   };
-
-  let norm = [0, 1, 0];
-  let origin = drawContext.origin; // [0, 0, 2];
-  let direction = [0, 0, -1];
-  let center = [0, 0, 0];
-
-  let dx = 0, dy = 0, dz = 0;
-  let roll = 0, yaw = 0, pitch = 0;
 
   updateLookMatrix();
 
@@ -38,13 +62,14 @@ export default function createGameCamera(scene, drawContext) {
   return api;
 
   function setViewBox(rect) {
+    // TODO: Remove duplicate with map camera
     const dx = (rect.left + rect.right)/2;
     const dy = (rect.top + rect.bottom)/2;
     const dpr = scene.getPixelRatio();
     const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
     origin[0] = dx;
     origin[1] = dy;
-    origin[2] = -nearHeight/Math.tan(drawContext.fov / 2);
+    origin[2] = nearHeight / Math.tan(drawContext.fov / 2);
     direction[0] = -origin[0];
     direction[1] = -origin[1];
     direction[2] = -origin[2];
@@ -59,33 +84,13 @@ export default function createGameCamera(scene, drawContext) {
   }
 
   function handleKeyDown(e) {
-    if (e.which === 87) dz = 1; // w
-    else if (e.which === 83) dz = -1;// s
-    else if (e.which === 65) dx = -1; // a
-    else if (e.which === 68) dx = 1 // d - left
-    else if (e.which === 82) dy = 1 // r - up
-    else if (e.which === 70) dy = -1; // f - down
-    else if (e.which === 69) roll = 1; // e - roll left
-    else if (e.which === 81) roll = -1 // q - roll right
-    else if (e.which === 39) yaw = -1; // yaw right 
-    else if (e.which === 37) yaw = 1; // yaw left
-    else if (e.which === 38) pitch = 1 // j - up
-    else if (e.which === 40) pitch = -1; // k - down
+    let handler = keymap[e.which];
+    if (handler) handler(1, e);
   }
 
   function handleKeyUp(e) {
-    if (e.which === 87) dz = 0; // w
-    else if (e.which === 83) dz = 0;// s
-    else if (e.which === 65) dx = 0; // a
-    else if (e.which === 68) dx = 0 // d - left
-    else if (e.which === 82) dy = 0 // r - up
-    else if (e.which === 70) dy = 0; // f - down
-    else if (e.which === 69) roll = 0; // e - roll left
-    else if (e.which === 81) roll = 0 // q - roll right
-    else if (e.which === 39) yaw = 0; // yaw right 
-    else if (e.which === 37) yaw = 0; // yaw left
-    else if (e.which === 38) pitch = 0 // j - up
-    else if (e.which === 40) pitch = 0; // k - down
+    let handler = keymap[e.which];
+    if (handler) handler(0, e);
   }
 
   function frame() {
@@ -115,19 +120,19 @@ export default function createGameCamera(scene, drawContext) {
     }
 
     if (roll) {
-      let q = quat.setAxisAngle([], direction, roll * rotateSpeed * speedFactor);
+      let q = quat.setAxisAngle([], direction, roll * rotateSpeed);
       let result = quat.multiply([], quat.multiply([], q, [norm[0], norm[1], norm[2], 1]), quat.conjugate([], q));
       vec3.normalize(norm, result);
     }
     if (yaw) {
-      let q = quat.setAxisAngle([], norm, yaw * rotateSpeed * speedFactor);
+      let q = quat.setAxisAngle([], norm, yaw * rotateSpeed);
       let result = quat.multiply([], quat.multiply([], q, [direction[0], direction[1], direction[2], 1]), quat.conjugate([], q));
       vec3.normalize(direction, result);
     }
     if (pitch) {
       let cross = vec3.cross([], direction, norm);
       vec3.normalize(cross, cross);
-      let q = quat.setAxisAngle([], cross, pitch * rotateSpeed * speedFactor);
+      let q = quat.setAxisAngle([], cross, pitch * rotateSpeed);
 
       let result = quat.multiply([], quat.multiply([], q, [direction[0], direction[1], direction[2], 1]), quat.conjugate([], q));
       vec3.normalize(direction, result);
