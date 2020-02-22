@@ -5,12 +5,12 @@ import onClap from './clap';
 import {mat4, vec4} from 'gl-matrix';
 import createMapCamera from './createMapCamera';
 
-export default function makeScene(canvas, options) {
+export default function createScene(canvas, options) {
   var width;
   var height;
-  var pixelRatio = window.devicePixelRatio;
   if (!options) options = {};
 
+  var pixelRatio = options.devicePixelRatio || window.devicePixelRatio;
   var wglContextOptions = options.wglContext;
 
   var gl = canvas.getContext('webgl', wglContextOptions) || canvas.getContext('experimental-webgl', wglContextOptions);

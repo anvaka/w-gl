@@ -1,0 +1,27 @@
+import {createScene, WireCollection} from 'w-gl';
+
+let scene = createScene(document.querySelector('canvas'));
+
+// let's draw a grid:
+let lines = new WireCollection(22);
+for (let row = 0; row <= 10; ++row) {
+  lines.add({
+    from: {x: 0, y: row},
+    to: {x: 10, y: row}
+  });
+}
+for (let col = 0; col <= 10; ++col) {
+  lines.add({
+    from: {x: col, y: 0},
+    to: {x: col, y: 10}
+  });
+}
+scene.appendChild(lines);
+
+// and lets bring it into the view:
+scene.setViewBox({
+  left: 0,
+  top: 10,
+  right: 10,
+  bottom: 0 
+})

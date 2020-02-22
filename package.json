@@ -1,10 +1,10 @@
 {
   "name": "w-gl",
   "version": "0.8.1",
-  "description": "A simple renderer for 2d",
+  "description": "A simple WebGL renderer",
   "main": "build/wgl.js",
-  "module": "build/wgl.module.js",
-  "jsnext:main": "build/wgl.module.js",
+  "module": "index.js",
+  "jsnext:main": "index.js",
   "scripts": {
     "build": "rm -rf build && rollup -c",
     "prepublish": "npm run build",

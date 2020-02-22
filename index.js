@@ -1,4 +1,5 @@
-export {default as scene} from './src/scene';
+export {default as scene} from './src/createScene';
+export {default as createScene} from './src/createScene';
 
 export {default as PointCollection} from './src/points/PointCollection';
 export {default as Point} from './src/points/Point';
