@@ -46,6 +46,8 @@ function makePointsProgram(gl, pointCollection) {
   }
 
   function draw(drawContext) {
+    if (!pointCollection.count) return;
+
     gl.useProgram(vertexProgram);
 
     let data = pointCollection.buffer;
