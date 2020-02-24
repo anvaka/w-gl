@@ -73,7 +73,6 @@ function initRenderers() {
 function wireRenderer(element, context) {
   if (!element.scene) return;
 
-  context.write(openTag);
   let elementGraph = createGraph();
 
   let project = getProjector(element, context)
