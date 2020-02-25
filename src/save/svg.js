@@ -211,8 +211,8 @@ function getProjector(element, context) {
 
   return function(sceneX, sceneY, sceneZ) {
     const coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
-    var x = Math.round(width * (coordinate[0]/coordinate[3] + 1) * 0.5);
-    var y = Math.round(height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5));
+    var x = width * (coordinate[0]/coordinate[3] + 1) * 0.5;
+    var y = height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5);
     return {x, y, isBehind: coordinate[3] <= 0};
   }
 }
