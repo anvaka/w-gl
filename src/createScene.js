@@ -32,6 +32,7 @@ export default function createScene(canvas, options) {
   var drawContext = { 
     width: window.innerWidth,
     height: window.innerHeight,
+    pixelRatio,
     canvas,
     camera,
     view,
@@ -86,6 +87,7 @@ export default function createScene(canvas, options) {
 
   function setPixelRatio(newPixelRatio) {
     pixelRatio = newPixelRatio;
+    drawContext.pixelRatio = pixelRatio;
     updateCanvasSize();
   }
 
