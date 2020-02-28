@@ -1,7 +1,8 @@
 import {mat4, vec4} from 'gl-matrix';
 import createGraph from 'ngraph.graph';
 
-export default function svg(scene, hooks) {
+export default function svg(scene, settings) {
+  settings = settings || {};
   let renderers = initRenderers();
   const sceneRoot = scene.getRoot();
   sceneRoot.updateWorldTransform();
@@ -12,9 +13,9 @@ export default function svg(scene, hooks) {
     scene
   }, scene.getDrawContext());
 
-  printHeader(context, hooks);
+  printHeader(context, settings);
   draw(sceneRoot.children);
-  closeDocument(context, hooks);
+  closeDocument(context, settings);
 
   return out.join('\n');
 
@@ -23,10 +24,15 @@ export default function svg(scene, hooks) {
   }
 
   function draw(children) {
+    let layerSettings = {
+      beforeWrite: settings.beforeWrite || yes,
+      round: settings.round === undefined ? undefined: settings.round
+    };
+
     for (var i = 0; i < children.length; ++i) {
       const child = children[i];
       const renderer = renderers.get(child.type);
-      if (renderer) renderer(child, context, (hooks && hooks.shouldWrite) || yes);
+      if (renderer) renderer(child, context, layerSettings);
 
       draw(child.children);
     }
@@ -35,12 +41,12 @@ export default function svg(scene, hooks) {
 
 function yes() { return true; }
 
-function printHeader(context, hooks) {
+function printHeader(context, settings) {
   const viewBox = `0 0 ${context.width} ${context.height}`;
   context.write('<?xml version="1.0" encoding="utf-8"?>');
 
-  if (hooks && hooks.open) {
-    context.write(hooks.open());
+  if (settings.open) {
+    context.write(settings.open());
   }
 
   context.write(`<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -59,9 +65,9 @@ function printHeader(context, hooks) {
   }
 }
 
-function closeDocument(context, hooks) {
-  if (hooks && hooks.close) {
-    context.write(hooks.close());
+function closeDocument(context, settings) {
+  if (settings.close) {
+    context.write(settings.close());
   }
   context.write('</svg>');
 }
@@ -72,12 +78,13 @@ function initRenderers() {
   return renderers;
 }
 
-function wireRenderer(element, context, beforeWrite) {
+function wireRenderer(element, context, settings) {
   if (!element.scene) return;
+  let {beforeWrite, round} = settings;
 
   let elementGraph = createGraph();
 
-  let project = getProjector(element, context)
+  let project = getProjector(element, context, round)
   element.forEachLine((from, to) => {
     let f = project(from.x, from.y, from.z);
     let t = project(to.x, to.y, to.z);
@@ -108,9 +115,10 @@ function wireRenderer(element, context, beforeWrite) {
     let {from, to} = link;
     if (from !== lastNode) {
       if (to === lastNode) {
-          let temp = from;
-          from = to;
-          to = temp;
+        // Swap them so that we can keep the path going.
+        let temp = from;
+        from = to;
+        to = temp;
       } else {
         commitLastPath();
         lastPath = [];
@@ -210,16 +218,32 @@ function hexString(x) {
   return (v.length === 1) ? '0' + v : v;
 }
 
-function getProjector(element, context) {
+function getProjector(element, context, roundFactor) {
   const {width, height, camera, view} = context;
   const mvp = mat4.multiply(mat4.create(), camera, view)
   mat4.multiply(mvp, mvp, element.worldModel);
 
+  const rounder = makeRounder(roundFactor);
+
   return function(sceneX, sceneY, sceneZ) {
     const coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
-    var x = width * (coordinate[0]/coordinate[3] + 1) * 0.5;
-    var y = height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5);
+    var x = rounder(width * (coordinate[0]/coordinate[3] + 1) * 0.5);
+    var y = rounder(height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5));
     return {x, y, isBehind: coordinate[3] <= 0};
+  }
+}
+
+function id(x) {
+  return x;
+}
+
+function makeRounder(roundFactor) {
+  if (roundFactor === undefined) return id;
+  if (roundFactor === true || roundFactor === 0) {
+    return Math.round;
+  }
+  return function(x) {
+    return Math.round(x * roundFactor) / roundFactor;
   }
 }
 
