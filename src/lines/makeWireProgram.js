@@ -1,5 +1,4 @@
 import gl_utils from '../glUtils';
-import shaderGraph from '../shaderGraph/index.js';
 import createMultiKeyCache from './createMultiKeyCache';
 
 let lineProgramCache = createMultiKeyCache();
@@ -10,9 +9,9 @@ export default function makeWireProgram(gl, wireCollection) {
   let lineProgram = lineProgramCache.get(programKey)
 
   if (!lineProgram) {
-    const { lineFSSrc, lineVSSrc } = getShadersCode(allowColors);
-    var lineVSShader = gl_utils.compile(gl, gl.VERTEX_SHADER, lineVSSrc);
-    var lineFSShader = gl_utils.compile(gl, gl.FRAGMENT_SHADER, lineFSSrc);
+    const { frag, vert } = getShadersCode(allowColors);
+    var lineVSShader = gl_utils.compile(gl, gl.VERTEX_SHADER, vert);
+    var lineFSShader = gl_utils.compile(gl, gl.FRAGMENT_SHADER, frag);
     lineProgram = gl_utils.link(gl, lineVSShader, lineFSShader);
     lineProgramCache.set(programKey, lineProgram);
   }
@@ -85,32 +84,23 @@ export default function makeWireProgram(gl, wireCollection) {
 }
 
 function getShadersCode(allowColors) {
-  const lineFSSrc = `precision mediump float;
-varying vec4 vColor;
-void main() {
-  gl_FragColor = vColor;
-}
-`;
-  const lineVSSrc = shaderGraph.getVSCode([
-    {
-      globals() {
-        return `
-  attribute vec3 aPosition;
+  return { 
+    vert:   `attribute vec3 aPosition;
   varying vec4 vColor;
   ${allowColors ? 'attribute vec4 aColor;' : ''}
   uniform vec4 uColor;
   uniform mat4 uCamera;
   uniform mat4 uModel;
   uniform mat4 uView;
-`;
-      },
-      mainBody() {
-        return `
+
+void main() {
   gl_Position = uCamera * uView * uModel * vec4(aPosition, 1.0);
   vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
-`;
-      }
-    }
-  ]);
-  return { lineVSSrc, lineFSSrc };
+}`,
+    frag: `precision mediump float;
+    varying vec4 vColor;
+    void main() {
+      gl_FragColor = vColor;
+    }`
+  };
 }
