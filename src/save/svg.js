@@ -26,12 +26,14 @@ export default function svg(scene, hooks) {
     for (var i = 0; i < children.length; ++i) {
       const child = children[i];
       const renderer = renderers.get(child.type);
-      if (renderer) renderer(child, context);
+      if (renderer) renderer(child, context, (hooks && hooks.shouldWrite) || yes);
 
       draw(child.children);
     }
   }
 }
+
+function yes() { return true; }
 
 function printHeader(context, hooks) {
   const viewBox = `0 0 ${context.width} ${context.height}`;
@@ -70,7 +72,7 @@ function initRenderers() {
   return renderers;
 }
 
-function wireRenderer(element, context) {
+function wireRenderer(element, context, beforeWrite) {
   if (!element.scene) return;
 
   let elementGraph = createGraph();
@@ -124,6 +126,10 @@ function wireRenderer(element, context) {
   function commitLastPath() {
     if (!lastPath) return;
     lastPath = lastPath.map(x => elementGraph.getNode(x).data);
+    if (!beforeWrite(lastPath)) {
+      return;
+    }
+
     let d = `M${lastPath[0].x} ${lastPath[0].y} L` + lastPath.slice(1).map(p => `${p.x} ${p.y}`).join(',');
     context.write(`<path d="${d}"/>`)
   }
