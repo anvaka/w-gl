@@ -1,5 +1,6 @@
 import Element from '../Element';
 import makeWireProgram from './makeWireProgram';
+import makeThickWireProgram from './makeThickWireProgram';
 import WireAccessor from './WireAccessor';
 import Color from '../Color';
 
@@ -24,6 +25,7 @@ class WireCollection extends Element {
     this._program = null;
     this.buffer = new ArrayBuffer(capacity * this.itemsPerLine * bytesPerElement)
     this.positions = new Float32Array(this.buffer);
+    this.width = options && options.width;
 
     if (this.allowColors) {
       // We are sharing the buffer!
@@ -33,7 +35,7 @@ class WireCollection extends Element {
 
   draw(gl, drawContext) {
     if (!this._program) {
-      this._program = makeWireProgram(gl, this);
+      this._program = this.width === undefined ? makeWireProgram(gl, this) : makeThickWireProgram(gl, this);
     }
     this._program.draw(drawContext);
   }
