@@ -35,9 +35,29 @@ class WireCollection extends Element {
 
   draw(gl, drawContext) {
     if (!this._program) {
-      this._program = this.width === undefined ? makeWireProgram(gl, this) : makeThickWireProgram(gl, this);
+      this._program = isWidthForThickWire(this.width) ? makeThickWireProgram(gl, this) : makeWireProgram(gl, this);
     }
     this._program.draw(drawContext);
+  }
+
+  setLineWidth(newLineWidth) {
+    if (newLineWidth === this.width) return;
+
+    let isThickWire = isWidthForThickWire(newLineWidth);
+    this.width = newLineWidth
+
+    if (!this._program || !this.scene) return;
+    if (isThickWire && this._program.isThickWire) {
+      // next frame should handle this
+      this.scene.renderFrame();
+      return;
+    }
+
+    // we need to switch the program
+    let parent = this.parent;
+    parent.removeChild()
+    this.dispose();
+    parent.appendChild(this);
   }
 
   add(line) {
@@ -108,7 +128,8 @@ class WireCollection extends Element {
 
   dispose() {
     if (this._program) {
-      this._program.dispose();
+      // TODO: Dispose only when last using element stops using this program.
+      // this._program.dispose();
       this._program = null;
     }
   }
@@ -131,3 +152,7 @@ class WireCollection extends Element {
 }
 
 export default WireCollection;
+
+function isWidthForThickWire(width) {
+  return width !== undefined && width !== 1 && width > 0;
+}

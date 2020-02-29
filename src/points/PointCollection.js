@@ -38,7 +38,8 @@ export default class PointCollection extends Element {
 
   dispose() {
     if (this._program) {
-      this._program.dispose();
+      // TODO: Dispose only when last using element stops using this program
+      // this._program.dispose();
       this._program = null;
     }
   }

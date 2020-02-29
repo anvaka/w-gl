@@ -49,6 +49,7 @@ export default function makeThickWireProgram(gl, wireCollection) {
   ]);
 
   var api = {
+    isThickWire: true,
     draw,
     dispose
   }
@@ -58,6 +59,13 @@ export default function makeThickWireProgram(gl, wireCollection) {
   function dispose() {
     if (lineBuffer) gl.deleteBuffer(lineBuffer);
     if (positionBuffer) gl.deleteBuffer(positionBuffer);
+    if (locations) {
+      gl.disableVertexAttribArray(locations.attributes.aFrom);
+      gl.disableVertexAttribArray(locations.attributes.aFromColor);
+      gl.disableVertexAttribArray(locations.attributes.aTo);
+      gl.disableVertexAttribArray(locations.attributes.aToColor);
+      gl.disableVertexAttribArray(locations.attributes.aPosition);
+    }
     gl.deleteProgram(lineProgram);
     lineProgramCache.remove(programKey);
   }
