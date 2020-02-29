@@ -33,6 +33,6 @@
     "gl-matrix": "^3.1.0",
     "ngraph.events": "1.2.1",
     "ngraph.graph": "^19.0.3",
-    "panzoom": "^9.1.0"
+    "panzoom": "^9.2.1"
   }
 }
