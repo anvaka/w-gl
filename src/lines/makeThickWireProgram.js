@@ -5,8 +5,9 @@ import makeWireProgram from './makeWireProgram';
 let lineProgramCache = createMultiKeyCache();
 
 export default function makeThickWireProgram(gl, wireCollection) {
-  let allowColors = !!wireCollection.allowColors;
-  let allowWidth = Number.isFinite(wireCollection.width) && wireCollection.width > 0;
+  let allowWidth = Number.isFinite(wireCollection.width) && 
+    wireCollection.width > 0 && wireCollection.width !== 1;
+
   let gle;
   if (allowWidth) {
     gle = gl.getExtension('ANGLE_instanced_arrays');
@@ -18,11 +19,12 @@ export default function makeThickWireProgram(gl, wireCollection) {
     return makeWireProgram(gl, wireCollection);
   }
 
+  let allowColors = !!wireCollection.allowColors;
   let programKey = [allowColors, gl];
   let lineProgram = lineProgramCache.get(programKey)
 
   if (!lineProgram) {
-    const { frag, vert } = getShadersCode(allowColors, allowWidth);
+    const { frag, vert } = getShadersCode(allowColors);
     var lineVSShader = gl_utils.compile(gl, gl.VERTEX_SHADER, vert);
     var lineFSShader = gl_utils.compile(gl, gl.FRAGMENT_SHADER, frag);
     lineProgram = gl_utils.link(gl, lineVSShader, lineFSShader);
@@ -108,7 +110,6 @@ export default function makeThickWireProgram(gl, wireCollection) {
       gl.vertexAttribPointer(locations.attributes.aTo, lineSize, gl.FLOAT, false, lineStride, lineSize * 4)
       gle.vertexAttribDivisorANGLE(locations.attributes.aTo, 1);
     }
-    // gl.drawArrays(gl.TRIANGLES, 0, 6);
     gle.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, wireCollection.count);
 
     gle.vertexAttribDivisorANGLE(locations.attributes.aFrom, 0);

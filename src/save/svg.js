@@ -103,7 +103,8 @@ function wireRenderer(element, context, settings) {
   if (elementGraph.getLinksCount() === 0) return; // all outside
 
   const strokeColor = toHexColor(getColor(element));
-  const strokeWidth = 1 / element.scene.getPixelRatio();
+  let elementWidth = element.width === undefined ? 1 : element.width;
+  const strokeWidth = elementWidth / element.scene.getPixelRatio();
   let style = `fill="none" stroke-width="${strokeWidth}" stroke="${strokeColor}"`
   let openTag = element.id ? `<g id="${element.id}" ${style}>` : `<g ${style}>`
   context.write(openTag);

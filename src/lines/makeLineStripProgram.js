@@ -2,11 +2,9 @@ import utils from '../glUtils';
 import shaderGraph from '../shaderGraph/index.js';
 import createMultiKeyCache from './createMultiKeyCache';
 
-export default makeLineProgram;
-
 let lineProgramCache = createMultiKeyCache();
 
-function makeLineProgram(gl, lineStripCollection) {
+export default function makeLineStripProgram(gl, lineStripCollection) {
   let {allowColors, is3D} = lineStripCollection;
   allowColors = !!allowColors; // coerce to boolean.
 
