@@ -84,6 +84,8 @@ export default function createGameCamera(scene, drawContext) {
   }
 
   function handleKeyDown(e) {
+    if (isModifierKey(e)) return;
+
     let handler = keymap[e.which];
     if (handler) handler(1, e);
   }
@@ -167,3 +169,7 @@ export default function createGameCamera(scene, drawContext) {
     return moveSpeed; 
   }
 }
+
+function isModifierKey(e) {
+    return e.altKey || e.ctrlKey || e.metaKey;
+  }
