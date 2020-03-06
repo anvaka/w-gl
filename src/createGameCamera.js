@@ -1,35 +1,39 @@
 import {mat4, vec3, quat} from 'gl-matrix';
 
+const xAxis = [1, 0, 0];
+const yAxis = [0, 1, 0];
+const zAxis = [0, 0, 1];
+
 export default function createGameCamera(scene, drawContext) {
-  let moveSpeed = 0.1;
-  let rotateSpeed =  Math.PI/180;
+  let rotateSpeed =  Math.PI/360;
   let speedFactor = 1;
-  let origin = drawContext.origin;
-  let norm = [0, 1, 0];
-  let direction = [0, 0, -1];
-  let center = drawContext.center;
+  let moveSpeed = 0.2;
+  let frameRotation = [0, 0, 0, 1];
+  let spareVec3 = [0, 0, 0];
 
   let dx = 0, dy = 0, dz = 0;
   let roll = 0, yaw = 0, pitch = 0;
+  let rotation = mat4.getRotation([], drawContext.view)
+  mat4.getTranslation(drawContext.origin, drawContext.view);
 
   // Note: I think using second order control here would result in more natural
   // movement. E.g. change velocity instead of changing the position.
   let keymap = {
     // general movement
-    87: function(isUp /*, e */) { dz =     isUp; }, // w
-    65: function(isUp /*, e */) { dx =    -isUp; }, // a
-    83: function(isUp /*, e */) { dz =    -isUp; }, // s
+    87: function(isUp /*, e */) { dz =     isUp; }, // w - forward
+    83: function(isUp /*, e */) { dz =    -isUp; }, // s - backward
     68: function(isUp /*, e */) { dx =     isUp; }, // d - left
+    65: function(isUp /*, e */) { dx =    -isUp; }, // a - right
     82: function(isUp /*, e */) { dy =     isUp; }, // r - up
     70: function(isUp /*, e */) { dy =    -isUp; }, // f - down
     69: function(isUp /*, e */) { roll =   isUp; }, // e - roll left
     81: function(isUp /*, e */) { roll =  -isUp; }, // q - roll right
-    39: function(isUp /*, e */) { yaw  =  -isUp; }, // yaw right 
-    37: function(isUp /*, e */) { yaw  =   isUp; }, // yaw left
-    38: function(isUp /*, e */) { pitch =  isUp; }, // j - up
-    40: function(isUp /*, e */) { pitch = -isUp; }, // k - down
+    37: function(isUp /*, e */) { yaw  =   isUp; }, // ← - yaw left
+    39: function(isUp /*, e */) { yaw  =  -isUp; }, // → - yaw right 
+    38: function(isUp /*, e */) { pitch =  isUp; }, // ↑ - pitch up
+    40: function(isUp /*, e */) { pitch = -isUp; }, // ↓ - pitch down
     // speed
-    90: function(isUp) {                            // z slow down
+    90: function(isUp) {                            // z - slow down
       if (isUp) speedFactor *= 0.9;
     },
     88: function(isUp) {                            // x - speed up
@@ -49,8 +53,6 @@ export default function createGameCamera(scene, drawContext) {
     }
   };
 
-  updateLookMatrix();
-
   let canvas = drawContext.canvas;
   canvas.style.outline = 'none';
   canvas.setAttribute('tabindex', 0);
@@ -62,25 +64,15 @@ export default function createGameCamera(scene, drawContext) {
   return api;
 
   function setViewBox(rect) {
-    // TODO: Remove duplicate with map camera
-    const dx = (rect.left + rect.right)/2;
-    const dy = (rect.top + rect.bottom)/2;
     const dpr = scene.getPixelRatio();
     const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
-    origin[0] = dx;
-    origin[1] = dy;
-    origin[2] = nearHeight / Math.tan(drawContext.fov / 2);
-    direction[0] = -origin[0];
-    direction[1] = -origin[1];
-    direction[2] = -origin[2];
-    vec3.normalize(direction, direction);
-    norm[0] = 0; norm[1] = 1; norm[2] = 0; 
-    updateLookMatrix();
-  }
+    drawContext.origin[0] = (rect.left + rect.right)/2;
+    drawContext.origin[1] = (rect.top + rect.bottom)/2;
+    drawContext.origin[2] = nearHeight / Math.tan(drawContext.fov / 2);
+    quat.set(rotation, 0, 0, 0, 1);
 
-  function updateLookMatrix() {
-    vec3.add(center, origin, direction);
-    mat4.lookAt(drawContext.view, origin, center, norm);
+    mat4.fromRotationTranslation(drawContext.view, rotation, drawContext.origin);
+    mat4.invert(drawContext.view, drawContext.view);
   }
 
   function handleKeyDown(e) {
@@ -100,52 +92,32 @@ export default function createGameCamera(scene, drawContext) {
     let changed = dx || dy || dz || yaw || pitch || roll;
     if (!changed) return;
 
+    let speedAmplifier = speedFactor * moveSpeed;
     if (dz) {
-      let dt = speedFactor * moveSpeed * dz;
-      origin[0] += direction[0] * dt;
-      origin[1] += direction[1] * dt;
-      origin[2] += direction[2] * dt;
+      translateOnAxis(zAxis, drawContext.origin, -speedAmplifier * dz, rotation);
     } 
     if (dx) {
-      let cross = vec3.cross([], direction, norm);
-      vec3.normalize(cross, cross);
-      let dt = speedFactor * moveSpeed * dx;
-      origin[0] += cross[0] * dt;
-      origin[1] += cross[1] * dt;
-      origin[2] += cross[2] * dt;
+      translateOnAxis(xAxis, drawContext.origin, speedAmplifier * dx, rotation);
     }
     if (dy) {
-      let dt = speedFactor * moveSpeed * dy;
-      origin[0] += norm[0] * dt;
-      origin[1] += norm[1] * dt;
-      origin[2] += norm[2] * dt;
+      translateOnAxis(yAxis, drawContext.origin, speedAmplifier * dy, rotation);
     }
 
-    if (roll) {
-      let q = quat.setAxisAngle([], direction, roll * rotateSpeed);
-      let result = quat.multiply([], quat.multiply([], q, [norm[0], norm[1], norm[2], 1]), quat.conjugate([], q));
-      vec3.normalize(norm, result);
-    }
-    if (yaw) {
-      let q = quat.setAxisAngle([], norm, yaw * rotateSpeed);
-      let result = quat.multiply([], quat.multiply([], q, [direction[0], direction[1], direction[2], 1]), quat.conjugate([], q));
-      vec3.normalize(direction, result);
-    }
-    if (pitch) {
-      let cross = vec3.cross([], direction, norm);
-      vec3.normalize(cross, cross);
-      let q = quat.setAxisAngle([], cross, pitch * rotateSpeed);
+    quat.set(frameRotation, pitch * rotateSpeed, yaw * rotateSpeed, -roll * rotateSpeed, 1);
+    quat.normalize(frameRotation, frameRotation);
+    quat.multiply(rotation, rotation, frameRotation);
 
-      let result = quat.multiply([], quat.multiply([], q, [direction[0], direction[1], direction[2], 1]), quat.conjugate([], q));
-      vec3.normalize(direction, result);
-      vec3.cross(norm, cross, direction);
-      vec3.normalize(norm, norm);
-    }
+    mat4.fromRotationTranslation(drawContext.view, rotation, drawContext.origin);
+    mat4.invert(drawContext.view, drawContext.view);
 
     scene.fire('transform', drawContext);
-    updateLookMatrix();
     scene.renderFrame();
   }
+
+  function translateOnAxis(axis, position, distance, q) {
+    let translation = vec3.transformQuat(spareVec3, axis, q);
+    return vec3.scaleAndAdd(position, position, translation, distance);
+  } 
 
   function dispose() {
     cancelAnimationFrame(frameHandle);
@@ -171,5 +143,5 @@ export default function createGameCamera(scene, drawContext) {
 }
 
 function isModifierKey(e) {
-    return e.altKey || e.ctrlKey || e.metaKey;
-  }
+  return e.altKey || e.ctrlKey || e.metaKey;
+}
