@@ -25,8 +25,8 @@ export default function createScene(canvas, options) {
 
   var view = mat4.create();
   var camera = mat4.create();
-  var fov = options.fov === undefined ? Math.PI / 6 : options.fov;
-  var near = options.near === undefined ? 1e-2 : options.near;
+  var fov = options.fov === undefined ? Math.PI * 45 / 180 : options.fov;
+  var near = options.near === undefined ? 0.01 : options.near;
   var far = options.far === undefined ? Infinity : options.far;
 
   var drawContext = { 
