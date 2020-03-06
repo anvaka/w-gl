@@ -78,7 +78,7 @@ export default function makeThickWireProgram(gl, wireCollection) {
     gl.useProgram(lineProgram);
 
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, wireCollection.worldModel);
-    gl.uniformMatrix4fv(locations.uniforms.uCamera, false, drawContext.camera);
+    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.camera);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
     gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
     gl.uniform1f(locations.uniforms.uWidth, wireCollection.width);
@@ -133,15 +133,15 @@ function getShadersCode(allowColors) {
     varying vec4 vColor;
     ${allowColors ? 'attribute vec4 aFromColor, aToColor;' : ''}
     uniform vec4 uColor;
-    uniform mat4 uCamera;
+    uniform mat4 projectionMatrix;
     uniform mat4 uModel;
     uniform mat4 uView;
     uniform float uWidth;
     uniform vec2 uResolution;
   
   void main() {
-    vec4 clip0 = uCamera * uView * uModel * vec4(aFrom, 1.0);
-    vec4 clip1 = uCamera * uView * uModel * vec4(aTo, 1.0);
+    vec4 clip0 = projectionMatrix * uView * uModel * vec4(aFrom, 1.0);
+    vec4 clip1 = projectionMatrix * uView * uModel * vec4(aTo, 1.0);
     vec2 screen0 = uResolution * (0.5 * clip0.xy/clip0.w + 0.5);
     vec2 screen1 = uResolution * (0.5 * clip1.xy/clip1.w + 0.5);
     vec2 xBasis = normalize(screen1 - screen0);

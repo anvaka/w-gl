@@ -53,7 +53,7 @@ function makePointsProgram(gl, pointCollection) {
     let data = pointCollection.buffer;
 
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel);
-    gl.uniformMatrix4fv(locations.uniforms.uCamera, false, drawContext.camera);
+    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.camera);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
     gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
 
@@ -173,7 +173,7 @@ function getShadersCode(allowColors) {
   varying vec4 vColor;
   ${allowColors ? 'attribute vec4 aColor;' : ''}
   uniform vec4 uColor;
-  uniform mat4 uCamera;
+  uniform mat4 projectionMatrix;
   uniform mat4 uModel;
   uniform mat4 uView;
   uniform vec3 uOrigin;
@@ -185,7 +185,7 @@ function getShadersCode(allowColors) {
   mat4 modelView = uView * uModel;
   vec4 mvPosition = modelView * vec4( aPosition, 1.0 );
 
-  vec4 glPos = uCamera * mvPosition;
+  vec4 glPos = projectionMatrix * mvPosition;
   gl_Position = glPos;
   vec4 glOrigin = modelView * vec4(uOrigin, 1.0);
   float cameraDist = length( glPos.xyz - glOrigin.xyz );

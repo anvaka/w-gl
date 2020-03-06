@@ -49,7 +49,7 @@ export default function makeLineStripProgram(gl, lineStripCollection) {
     gl.useProgram(lineProgram);
 
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, lineStripCollection.worldModel);
-    gl.uniformMatrix4fv(locations.uniforms.uCamera, false, drawContext.camera);
+    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.camera);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
     gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
 
@@ -114,14 +114,14 @@ void main() {
   varying vec4 vColor;
   ${allowColors ? 'attribute vec4 aColor;' : ''}
   uniform vec4 uColor;
-  uniform mat4 uCamera;
+  uniform mat4 projectionMatrix;
   uniform mat4 uModel;
   uniform mat4 uView;
 `;
       },
       mainBody() {
         return `
-  gl_Position = uCamera * uView * uModel * vec4(aPosition, 1.0);
+  gl_Position = projectionMatrix * uView * uModel * vec4(aPosition, 1.0);
   vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
 `;
       }

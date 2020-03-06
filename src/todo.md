@@ -1,5 +1,6 @@
 ## todo
 
+* Better game camera (mix of map/game camera)
 * Polygons
 * Strip line with custom width
 * Per segment line width 
