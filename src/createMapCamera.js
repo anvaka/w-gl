@@ -1,5 +1,5 @@
 import makePanzoom from 'panzoom';
-import {mat4} from 'gl-matrix';
+import {quat} from 'gl-matrix';
 
 export default function createMapCamera(scene, drawContext) {
   var wglController = wglPanZoom(scene, drawContext);
@@ -44,44 +44,42 @@ export default function createMapCamera(scene, drawContext) {
 }
 
 function wglPanZoom(scene, drawContext) {
-    var z = 1;
-    var fov = drawContext.fov;
-    var controller = {
-      applyTransform(newT) {
-        z = 1 / newT.scale;
-        let zScale = 2 * Math.tan( fov / 2 ) * z
-        zScale = drawContext.height / ( zScale * scene.getPixelRatio());
+  var z = 1;
+  var fov = drawContext.fov;
+  var controller = {
+    applyTransform(newT) {
+      z = 1 / newT.scale;
+      let zScale = 2 * Math.tan( fov / 2 ) * z
+      zScale = drawContext.height / ( zScale * scene.getPixelRatio());
 
-        let dx = -newT.x / zScale;
-        let dy = newT.y / zScale;
+      let dx = -newT.x / zScale;
+      let dy = newT.y / zScale;
+      let view = drawContext.view;
 
+      view.position[0] = dx;
+      view.position[1] = dy;
+      view.position[2] = z;
+      quat.set(view.rotation, 0, 0, 0, 1);
+      view.update();
 
-        drawContext.origin[0] = dx;
-        drawContext.origin[1] = dy;
-        drawContext.origin[2] = z;
-        drawContext.center[0] = dx;
-        drawContext.center[1] = dy;
-        drawContext.center[2] = 0;
+      scene.fire('transform', drawContext);
+      scene.renderFrame()
+    },
 
-        scene.fire('transform', drawContext);
-        mat4.lookAt(drawContext.view, drawContext.origin, drawContext.center, [0, 1, 0]);
-        scene.renderFrame()
-      },
+    getOwner() {
+      return drawContext.canvas
+    },
 
-      getOwner() {
-        return drawContext.canvas
-      },
-
-      getScreenCTM() {
-        const dpr = 1/scene.getPixelRatio();
-        return {
-          a: 1,
-          d: 1,
-          e: dpr * drawContext.width / 2,
-          f: dpr * drawContext.height / 2
-        }
+    getScreenCTM() {
+      const dpr = 1/scene.getPixelRatio();
+      return {
+        a: 1,
+        d: 1,
+        e: dpr * drawContext.width / 2,
+        f: dpr * drawContext.height / 2
       }
     }
+  }
 
-    return controller;
+  return controller;
   }

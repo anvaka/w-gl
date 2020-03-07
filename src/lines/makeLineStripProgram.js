@@ -49,9 +49,9 @@ export default function makeLineStripProgram(gl, lineStripCollection) {
     gl.useProgram(lineProgram);
 
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, lineStripCollection.worldModel);
-    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.camera);
-    gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
-    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
+    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
+    gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
+    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.view.position);
 
     let {color, nextElementIndex, madeFullCircle} = lineStripCollection;
     gl.uniform4f(locations.uniforms.uColor, color.r, color.g, color.b, color.a);

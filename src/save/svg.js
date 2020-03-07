@@ -220,8 +220,8 @@ function hexString(x) {
 }
 
 function getProjector(element, context, roundFactor) {
-  const {width, height, camera, view} = context;
-  const mvp = mat4.multiply(mat4.create(), camera, view)
+  const {width, height, projection, view} = context;
+  const mvp = mat4.multiply(mat4.create(), projection, view.matrix)
   mat4.multiply(mvp, mvp, element.worldModel);
 
   const rounder = makeRounder(roundFactor);

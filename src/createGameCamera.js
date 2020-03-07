@@ -1,20 +1,14 @@
-import {mat4, vec3, quat} from 'gl-matrix';
-
-const xAxis = [1, 0, 0];
-const yAxis = [0, 1, 0];
-const zAxis = [0, 0, 1];
+import {quat} from 'gl-matrix';
 
 export default function createGameCamera(scene, drawContext) {
   let rotateSpeed =  Math.PI/360;
   let speedFactor = 1;
   let moveSpeed = 0.2;
   let frameRotation = [0, 0, 0, 1];
-  let spareVec3 = [0, 0, 0];
 
   let dx = 0, dy = 0, dz = 0;
   let roll = 0, yaw = 0, pitch = 0;
-  let rotation = mat4.getRotation([], drawContext.view)
-  mat4.getTranslation(drawContext.origin, drawContext.view);
+  let {rotation} = drawContext.view;
 
   // Note: I think using second order control here would result in more natural
   // movement. E.g. change velocity instead of changing the position.
@@ -66,13 +60,13 @@ export default function createGameCamera(scene, drawContext) {
   function setViewBox(rect) {
     const dpr = scene.getPixelRatio();
     const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
-    drawContext.origin[0] = (rect.left + rect.right)/2;
-    drawContext.origin[1] = (rect.top + rect.bottom)/2;
-    drawContext.origin[2] = nearHeight / Math.tan(drawContext.fov / 2);
+    const {position, rotation} = drawContext.view;
+    position[0] = (rect.left + rect.right)/2;
+    position[1] = (rect.top + rect.bottom)/2;
+    position[2] = nearHeight / Math.tan(drawContext.fov / 2);
     quat.set(rotation, 0, 0, 0, 1);
 
-    mat4.fromRotationTranslation(drawContext.view, rotation, drawContext.origin);
-    mat4.invert(drawContext.view, drawContext.view);
+    drawContext.view.update();
   }
 
   function handleKeyDown(e) {
@@ -94,30 +88,24 @@ export default function createGameCamera(scene, drawContext) {
 
     let speedAmplifier = speedFactor * moveSpeed;
     if (dz) {
-      translateOnAxis(zAxis, drawContext.origin, -speedAmplifier * dz, rotation);
+      drawContext.view.translateZ(-speedAmplifier * dz);
     } 
     if (dx) {
-      translateOnAxis(xAxis, drawContext.origin, speedAmplifier * dx, rotation);
+      drawContext.view.translateX(speedAmplifier * dx);
     }
     if (dy) {
-      translateOnAxis(yAxis, drawContext.origin, speedAmplifier * dy, rotation);
+      drawContext.view.translateY(speedAmplifier * dy);
     }
 
     quat.set(frameRotation, pitch * rotateSpeed, yaw * rotateSpeed, -roll * rotateSpeed, 1);
     quat.normalize(frameRotation, frameRotation);
     quat.multiply(rotation, rotation, frameRotation);
 
-    mat4.fromRotationTranslation(drawContext.view, rotation, drawContext.origin);
-    mat4.invert(drawContext.view, drawContext.view);
+    drawContext.view.update();
 
     scene.fire('transform', drawContext);
     scene.renderFrame();
   }
-
-  function translateOnAxis(axis, position, distance, q) {
-    let translation = vec3.transformQuat(spareVec3, axis, q);
-    return vec3.scaleAndAdd(position, position, translation, distance);
-  } 
 
   function dispose() {
     cancelAnimationFrame(frameHandle);

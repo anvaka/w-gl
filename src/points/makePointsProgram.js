@@ -53,9 +53,9 @@ function makePointsProgram(gl, pointCollection) {
     let data = pointCollection.buffer;
 
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel);
-    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.camera);
-    gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
-    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
+    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
+    gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
+    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.view.position);
 
     gl.bindTexture(gl.TEXTURE_2D, pointTexture);
 

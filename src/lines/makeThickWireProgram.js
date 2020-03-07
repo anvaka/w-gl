@@ -78,9 +78,9 @@ export default function makeThickWireProgram(gl, wireCollection) {
     gl.useProgram(lineProgram);
 
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, wireCollection.worldModel);
-    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.camera);
-    gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view);
-    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.origin);
+    gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
+    gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
+    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.view.position);
     gl.uniform1f(locations.uniforms.uWidth, wireCollection.width);
     gl.uniform2f(locations.uniforms.uResolution, drawContext.width, drawContext.height);
 

@@ -4,6 +4,7 @@ import Element from './Element';
 import onClap from './clap';
 import {mat4, vec4} from 'gl-matrix';
 import createMapCamera from './createMapCamera';
+import ViewMatrix from './ViewMatrix';
 
 export default function createScene(canvas, options) {
   var width;
@@ -23,8 +24,8 @@ export default function createScene(canvas, options) {
   var frameToken = 0;
   var sceneRoot = new Element();
 
-  var view = mat4.create();
-  var camera = mat4.create();
+  var view = new ViewMatrix();
+  var projection = mat4.create();
   var fov = options.fov === undefined ? Math.PI * 45 / 180 : options.fov;
   var near = options.near === undefined ? 0.01 : options.near;
   var far = options.far === undefined ? Infinity : options.far;
@@ -34,11 +35,10 @@ export default function createScene(canvas, options) {
     height: window.innerHeight,
     pixelRatio,
     canvas,
-    camera,
+    projection,
     view,
     fov,
     center: [0, 0, 0],
-    origin: new Float32Array(3)
  };
 
   updateCanvasSize();
@@ -167,7 +167,7 @@ export default function createScene(canvas, options) {
     drawContext.width = width;
     drawContext.height = height;
     sceneRoot.worldTransformNeedsUpdate = true;
-    mat4.perspective(camera, fov, width/height, near, far);
+    mat4.perspective(projection, fov, width/height, near, far);
     renderFrame();
   }
 
@@ -200,9 +200,10 @@ export default function createScene(canvas, options) {
     let clipSpaceX = (dpr * clientX / width) * 2 - 1;
     let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
 
-    var mvp = mat4.multiply(mat4.create(), camera, view)
+    var mvp = mat4.multiply(mat4.create(), projection, view.matrix)
     mat4.multiply(mvp, mvp, sceneRoot.model);
     // TODO: This wouldn't work when camera is rotated.
+    // todo: Center is not correct
     var zero = vec4.transformMat4([], [drawContext.center[0], drawContext.center[1], drawContext.center[2], 1], mvp);
     var iMvp = mat4.invert(mat4.create(), mvp);
     if (!iMvp) {
@@ -219,7 +220,7 @@ export default function createScene(canvas, options) {
 
   function getClientCoordinate(sceneX, sceneY, sceneZ = 0) {
     // TODO: this is not optimized either.
-    var mvp = mat4.multiply(mat4.create(), camera, view)
+    var mvp = mat4.multiply(mat4.create(), projection, view.matrix)
     mat4.multiply(mvp, mvp, sceneRoot.model);
     var coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
 
