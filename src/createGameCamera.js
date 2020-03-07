@@ -8,7 +8,6 @@ export default function createGameCamera(scene, drawContext) {
 
   let dx = 0, dy = 0, dz = 0;
   let roll = 0, yaw = 0, pitch = 0;
-  let {rotation} = drawContext.view;
 
   // Note: I think using second order control here would result in more natural
   // movement. E.g. change velocity instead of changing the position.
@@ -97,11 +96,12 @@ export default function createGameCamera(scene, drawContext) {
       drawContext.view.translateY(speedAmplifier * dy);
     }
 
+    const view = drawContext.view;
     quat.set(frameRotation, pitch * rotateSpeed, yaw * rotateSpeed, -roll * rotateSpeed, 1);
     quat.normalize(frameRotation, frameRotation);
-    quat.multiply(rotation, rotation, frameRotation);
+    quat.multiply(view.rotation, view.rotation, frameRotation);
 
-    drawContext.view.update();
+    view.update();
 
     scene.fire('transform', drawContext);
     scene.renderFrame();
