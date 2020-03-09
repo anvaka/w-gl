@@ -1,6 +1,7 @@
 ## todo
 
 * Better game camera (mix of map/game camera)
+* Remove shader graph
 * Polygons
 * Strip line with custom width
 * Per segment line width 
