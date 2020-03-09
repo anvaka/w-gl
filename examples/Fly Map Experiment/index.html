@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'>
+  <title>space map</title>
+  <style>
+    body, canvas {
+      margin: 0;
+      padding: 0;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+    .legend {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      pointer-events: none;
+    }
+    .color.y {
+      color: #ff0000;
+    }
+    .color.x {
+      color: #00ff00;
+    }
+    .color.z {
+      color: #0000ff;
+    }
+  </style>
+</head>
+<body>
+  <canvas></canvas>
+  <div class='legend'>
+    <div class='color x'>X axis</div>
+    <div class='color y'>Y axis</div>
+    <div class='color z'>Z axis</div>
+  </div>
+  <script src="../../build/wgl.js"></script>
+  <script src="../shared/gl-matrix.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
