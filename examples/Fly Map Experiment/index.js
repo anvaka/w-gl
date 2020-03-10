@@ -1,7 +1,7 @@
 /**
  * Please ignore this. I'm still learning quaternions, and matrices and stuff.
  */
-const {createScene, WireCollection} = window.wgl;
+const {createScene, WireCollection, createGameCamera} = window.wgl;
 const {mat4, quat, vec3} = glMatrix;
 
 let scene = createScene(document.querySelector('canvas'), {
@@ -11,41 +11,9 @@ let scene = createScene(document.querySelector('canvas'), {
 
 //let someShape = drawSomeShape(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}))
 let someShape = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
+//let someShape = createCameraImage();
 scene.appendChild(someShape);
 
-// let axis = [1,1,0]
-// let x = new wgl.WireCollection(10, {width: 4, is3D: true, allowColors: true})
-// x.add({
-//   from:{x: 0, y: 0, z: 0, color: 0xff0000ff},
-//   to:{x: axis[0], y: axis[1], z: axis[2],color: 0xff0000ff},
-// });
-// let q = quat.setAxisAngle([], axis, Math.PI/4);
-// let o = vec3.transformQuat([], [1, 1, 0], q);
-// let v = [1, 0, 0];
-// let dt = 0;
-// let ui = x.add({
-//   from:{x: 0, y: 0, z: 0, color: 0xffFF00ff},
-//   to:{x: o[0], y: o[1], z: o[2],color: 0xffff00ff},
-// });
-// scene.appendChild(x);
-// requestAnimationFrame(f);
-// function f(){
-//   requestAnimationFrame(f);
-//   dt += 0.1;
-//   q = quat.setAxisAngle([], axis, dt);
-//   o = vec3.transformQuat([], v, q);
-
-//   ui.update({x: 0, y: 0, z: 0, color: 0xffFF00ff}, {x: o[0], y: o[1], z: o[2],color: 0xffff00ff});
-//   scene.renderFrame();
-// }
-
-// let referencePoint = createReferencePoint();
-// scene.appendChild(referencePoint);
-
-// let cameraImage = createCameraImage();
-// scene.appendChild(cameraImage);
-
-// let simulation = createCameraSceneSimulation(referencePoint, cameraImage);
 
 // and lets bring it into the view:
 scene.setViewBox({
@@ -115,26 +83,14 @@ function createSpaceMapCamera(scene, drawContext) {
 
   function onMouseMove(e) {
 
-    if (!isAltMouseMove) {
+    if (isAltMouseMove) {
       let to = toSphere(e.clientX, e.clientY);
       let from = toSphere(mouseX, mouseY);
       mouseX = e.clientX;
       mouseY = e.clientY;
-      let cross = vec3.normalize([], vec3.cross([], from, to));
-      // toUI.update({x: 0, y: 0, z: 0, color: 0xffffffff}, {x: to[0], y: to[1], z: to[2], color: 0xffffffff})
-      // fromUI.update({x: 0, y: 0, z: 0, color: 0xff00ffff}, {x: from[0], y: from[1], z: from[2], color: 0xff00ffff})
-      // crossUI.update({x: 0, y: 0, z: 0, color: 0xffff00ff}, {x: cross[0], y: cross[1], z: cross[2], color: 0xffff00ff})
+      let currentRotation = quat.rotationTo([], from, to);
 
-      //let currentRotation = quat.rotationTo([], from, to);
-      let dis = Math.hypot(from[0] - to[0], from[1] - to[1], from[2] - to[2]) * 2;
-      if (dis < 1e-2) return;
-      let currentRotation = quat.setAxisAngle([], cross, dis);
-
-      // quat.multiply(centerRotation, centerRotation, currentRotation);
-
-      let shapeRotation = view.rotation; // mat4.getRotation([], someShape.model);
-      quat.multiply(view.rotation, currentRotation, shapeRotation);
-      view.update(); 
+      quat.multiply(centerRotation, centerRotation, currentRotation);
     } else {
       let p = getOffsetXY(e.clientX, e.clientY);
       let m = getOffsetXY(mouseX, mouseY);
@@ -164,10 +120,6 @@ function createSpaceMapCamera(scene, drawContext) {
       if (length > 1) length = 1;
       let pz = Math.sqrt(1 - length * length);
       return vec3.normalize([], [px, py, pz]);
-      // let px = 2 * r * Math.tan(drawContext.fov/2) * (x - 0.5) * ar;
-      // let py = (0.5 - y) *  2 * r * Math.tan(drawContext.fov/2);
-      // let pz = Math.hypot(px, py);
-      // return vec3.normalize([], [px, py, pz]);
     }
   }
 
@@ -192,24 +144,31 @@ function createSpaceMapCamera(scene, drawContext) {
   }
 
   function onKey(e, isDown) {
-    console.log(e.which);
+    // console.log(e.which);
     quat.set(frameRotation, 0, 0, 0, 1);
+    vec3.set(frameCenterTransition, 0, 0, 0);
     switch(e.which) {
       case 84: // T 
         frameRotation[0] = isDown * rotationSpeed; break;
       case 71: // G
         frameRotation[0] = -isDown * rotationSpeed; break;
       case 72: // H
-        frameRotation[1] = -isDown * rotationSpeed; break;
-      case 70: // F
         frameRotation[1] = isDown * rotationSpeed; break;
-      case 79: // O - move forward on  
-        frameCenterTransition[2] = -isDown * moveSpeed; break;
-      case 76: // L - move backward
-        frameCenterTransition[2] = isDown * moveSpeed; break;
+      case 70: // F
+        frameRotation[1] = -isDown * rotationSpeed; break;
+
+      case 37: 
+        frameCenterTransition[0] = -isDown * moveSpeed; break;
+      case 39: 
+        frameCenterTransition[0] = isDown * moveSpeed; break;
+      case 38: 
+        frameCenterTransition[1] = isDown * moveSpeed; break;
+      case 40: 
+        frameCenterTransition[1] = -isDown * moveSpeed; break;
     }
 
     quat.normalize(frameRotation, frameRotation);
+
   }
 
   function frame() {
@@ -219,19 +178,16 @@ function createSpaceMapCamera(scene, drawContext) {
         frameCenterTransition[0] || frameCenterTransition[1] || frameCenterTransition[2];
     if (!changed) return;
 
-    // quat.multiply(centerRotation, centerRotation, frameRotation);
-//    quat.multiply(cameraRotation, cameraRotation, frameRotation);
-
-    // if (frameCenterTransition[2]) {
-    //   translateOnAxisQuat(centerPointPosition, frameCenterTransition[2], [0, 0, 1], [0, 0, 0, 1]);
-    // }
+    quat.multiply(centerRotation, centerRotation, frameRotation);
+    vec3.add(centerPointPosition, centerPointPosition, frameCenterTransition);
     redraw();
   }
 
   function redraw() {
     // update camera
-    vec3.set(cameraPosition, centerPointPosition[0],centerPointPosition[1], centerPointPosition[2]);
+    vec3.set(cameraPosition, centerPointPosition[0], centerPointPosition[1], centerPointPosition[2]);
     translateOnAxisQuat(cameraPosition, r, [0, 0, 1], centerRotation);
+    quat.set(view.rotation, centerRotation[0], centerRotation[1], centerRotation[2], centerRotation[3])
     view.update();
 
     scene.renderFrame();
@@ -240,7 +196,7 @@ function createSpaceMapCamera(scene, drawContext) {
   function translateOnAxisQuat(v, distance, axis, quat) {
     let translation = vec3.transformQuat(spareVec3, axis, quat);
     vec3.scaleAndAdd(v, v, translation, distance);
-    return this;
+    return v;
   }
 }
 
@@ -361,6 +317,31 @@ function drawCube(lines) {
     from: {x: 0.5, y: -0.5, z:  0.5, color},
     to:   {x: 0.5, y: -0.5, z: -0.5, color},
   });
+
+  let last = {x: 0.5, y: -0.5, z:  0, color};
+  let n = [1, 0.4, 0]
+  for (let i = 0; i < 10; ++i) {
+    let other = {
+      x: last.x + n[0] * (Math.random()),
+      y: last.y + n[1] * (Math.random()),
+      z: last.z + n[2] * (Math.random()),
+      color
+    }
+    lines.add({ from: last, to:   other });
+    last = other;
+  }
+  last = {x: -0.5, y: -0.5, z:  0, color};
+  n = [-1, 0.4, 0]
+  for (let i = 0; i < 10; ++i) {
+    let other = {
+      x: last.x + n[0] * (Math.random()),
+      y: last.y + n[1] * (Math.random()),
+      z: last.z + n[2] * (Math.random()),
+      color
+    }
+    lines.add({ from: last, to:   other });
+    last = other;
+  }
   return lines
 }
 
