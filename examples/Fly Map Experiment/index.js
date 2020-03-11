@@ -1,19 +1,20 @@
 /**
  * Please ignore this. I'm still learning quaternions, and matrices and stuff.
  */
-const {createScene, WireCollection, createGameCamera} = window.wgl;
+const {createScene, WireCollection, createGameCamera, PointCollection} = window.wgl;
 const {mat4, quat, vec3} = glMatrix;
 
 let scene = createScene(document.querySelector('canvas'), {
   camera: createSpaceMapCamera
 });
 
+//drawGraph(scene);
 
-//let someShape = drawSomeShape(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}))
-let someShape = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
-//let someShape = createCameraImage();
+let someShape = drawSomeShape(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}))
 scene.appendChild(someShape);
-
+let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
+scene.appendChild(someShape1);
+//let someShape = createCameraImage();
 
 // and lets bring it into the view:
 scene.setViewBox({
@@ -23,13 +24,20 @@ scene.setViewBox({
   bottom: 0 
 })
 
-
 function createSpaceMapCamera(scene, drawContext) {
-  let rotationSpeed = Math.PI/360;
+  let rotationSpeed = Math.PI * 4;
   let view = drawContext.view;
   let moveSpeed = 0.1;
   let r = 1;
+  let phi = 0; // angle of rotation around Oz
+  let minPhi = -Infinity;
+  let maxPhi = Infinity;
+
+  let theta = Math.PI/2; // angle of rotation around Ox
+  let minTheta = 0;
+  let maxTheta = Math.PI;
   let mouseX, mouseY, isAltMouseMove;
+  let up = [0, 1, 0]
   let spareVec3 = [0, 0, 0];
   let centerPoint = mat4.create();
   let centerPointPosition = mat4.getTranslation([], centerPoint);
@@ -83,18 +91,18 @@ function createSpaceMapCamera(scene, drawContext) {
 
   function onMouseMove(e) {
 
-    if (isAltMouseMove) {
-      let to = toSphere(e.clientX, e.clientY);
-      let from = toSphere(mouseX, mouseY);
+    let ar = drawContext.width/drawContext.height;
+    if (!isAltMouseMove) {
+      phi += rotationSpeed * (mouseX - e.clientX)/drawContext.width;
+      theta += rotationSpeed * (mouseY - e.clientY)/drawContext.height * ar * 0.5;
       mouseX = e.clientX;
       mouseY = e.clientY;
-      let currentRotation = quat.rotationTo([], from, to);
 
-      quat.multiply(centerRotation, centerRotation, currentRotation);
+      theta = clamp(theta, minTheta, maxTheta);
+      phi = clamp(phi, minPhi, maxPhi);
     } else {
       let p = getOffsetXY(e.clientX, e.clientY);
       let m = getOffsetXY(mouseX, mouseY);
-      let ar = drawContext.width/drawContext.height;
       let dy = (p.y - m.y);
       let dx = ar * (m.x - p.x);
       // todo: change focal point to match mouse cursor
@@ -144,7 +152,6 @@ function createSpaceMapCamera(scene, drawContext) {
   }
 
   function onKey(e, isDown) {
-    // console.log(e.which);
     quat.set(frameRotation, 0, 0, 0, 1);
     vec3.set(frameCenterTransition, 0, 0, 0);
     switch(e.which) {
@@ -185,9 +192,19 @@ function createSpaceMapCamera(scene, drawContext) {
 
   function redraw() {
     // update camera
-    vec3.set(cameraPosition, centerPointPosition[0], centerPointPosition[1], centerPointPosition[2]);
-    translateOnAxisQuat(cameraPosition, r, [0, 0, 1], centerRotation);
-    quat.set(view.rotation, centerRotation[0], centerRotation[1], centerRotation[2], centerRotation[3])
+    let p = getSpherical(r, theta, phi);
+    let r1 = Math.hypot(r, 1);
+    let theta1 = theta - Math.acos(r/r1);
+    let p1 = getSpherical(r1, theta1, phi);
+
+    vec3.sub(p1, p1, p);
+
+    vec3.set(cameraPosition, p[0], p[1], p[2]);
+    vec3.add(cameraPosition, cameraPosition, centerPointPosition);
+    mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, p1);
+    mat4.getRotation(view.rotation, view.matrix);
+    // translateOnAxisQuat(cameraPosition, r, [0, 0, 1], centerRotation);
+    // quat.set(view.rotation, centerRotation[0], centerRotation[1], centerRotation[2], centerRotation[3])
     view.update();
 
     scene.renderFrame();
@@ -346,19 +363,61 @@ function drawCube(lines) {
 }
 
 function drawSomeShape(lines) {
-  let color = 0xffffffff;
+  let color = 0x33ffff48;
   let count = 100;
-  for (let row = 0; row <= count; ++row) {
+  for (let row = -count; row <= count; ++row) {
     lines.add({
-      from: {x: 0, y: row, z: 0, color},
-      to: {x: count, y: row, z: 0, color}
+      from: {x: -count, y: 0, z: -row, color},
+      to: {x: count, y: 0, z: -row, color}
     });
   }
-  for (let col = 0; col <= count; ++col) {
+  for (let col = -count; col <= count; ++col) {
     lines.add({
-      from: {x: col, y: 0, z: 0, color},
-      to: {x: col, y: count, z: 0, color}
+      from: {x: col, y: 0, z: count, color},
+      to: {x: col, y: 0, z: -count, color}
     });
   }
   return lines;
+}
+
+function getSpherical(r, theta, phi) {
+  let y = r * Math.cos(theta);
+  let l = r * Math.sin(theta); // = Math.sqrt(r * r - y * y);
+  let x = l * Math.sin(phi);
+  let z = l * Math.cos(phi);
+  return [x, y, z];
+}
+
+function clamp(v, min, max) {
+  if (v < min) v = min;
+  if (v > max) v = max;
+  return v;
+}
+
+function drawGraph(scene) {
+  let graph = window.layout()
+  let points = new PointCollection(graph.getNodesCount(), {
+    is3D: true
+  });
+  graph.forEachNode(node => {
+    points.add({
+      x: node.data.x,
+      y: node.data.y,
+      z: node.data.z,
+      size: 30
+    })
+  });
+  scene.appendChild(points);
+  let links = new WireCollection(graph.getLinksCount(), {
+    is3D: true
+  });
+  graph.forEachLink(link => {
+    let from = graph.getNode(link.fromId);
+    let to = graph.getNode(link.toId);
+    links.add({
+      from: {...from.data, color: 0xffffffff},
+      to: {...to.data, color: 0xffffffff}
+    })
+  })
+  scene.appendChild(links);
 }
