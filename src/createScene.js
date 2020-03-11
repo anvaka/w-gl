@@ -202,14 +202,14 @@ export default function createScene(canvas, options) {
 
     var mvp = mat4.multiply(mat4.create(), projection, view.matrix)
     mat4.multiply(mvp, mvp, sceneRoot.model);
-    // TODO: This wouldn't work when camera is rotated.
-    // todo: Center is not correct
-    var zero = vec4.transformMat4([], [drawContext.center[0], drawContext.center[1], drawContext.center[2], 1], mvp);
     var iMvp = mat4.invert(mat4.create(), mvp);
     if (!iMvp) {
       // likely they zoomed out too far for this `near` plane.
       return;
     }
+    // TODO: This wouldn't work when camera is rotated.
+    // todo: Center is not correct
+    var zero = vec4.transformMat4([], [drawContext.center[0], drawContext.center[1], drawContext.center[2], 1], mvp);
     const sceneCoordinate =  vec4.transformMat4([], [zero[3] * clipSpaceX, zero[3] * clipSpaceY, zero[2], zero[3]], iMvp);
     return {
       x: sceneCoordinate[0]/sceneCoordinate[3],
