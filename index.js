@@ -12,3 +12,4 @@ export {default as utils} from './src/glUtils';
 export {default as toSVG} from './src/save/svg';
 export {default as createGameCamera} from './src/createGameCamera'
 export {default as createMapCamera} from './src/createMapCamera'
+export {default as create3dMapCamera} from './src/create3dMapCamera'

@@ -1,19 +1,19 @@
 /**
  * Please ignore this. I'm still learning quaternions, and matrices and stuff.
  */
-const {createScene, WireCollection, createGameCamera, PointCollection} = window.wgl;
+const {createScene, WireCollection, createGameCamera, create3dMapCamera, PointCollection} = window.wgl;
 const {mat4, quat, vec3} = glMatrix;
 
 let scene = createScene(document.querySelector('canvas'), {
-  camera: createSpaceMapCamera
+  camera: create3dMapCamera
 });
 
 //drawGraph(scene);
 
 let someShape = drawSomeShape(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}))
 scene.appendChild(someShape);
-let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
-scene.appendChild(someShape1);
+// let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
+// scene.appendChild(someShape1);
 //let someShape = createCameraImage();
 
 // and lets bring it into the view:
@@ -23,200 +23,6 @@ scene.setViewBox({
   right: 10,
   bottom: 0 
 })
-
-function createSpaceMapCamera(scene, drawContext) {
-  let rotationSpeed = Math.PI * 4;
-  let view = drawContext.view;
-  let moveSpeed = 0.1;
-  let r = 1;
-  let phi = 0; // angle of rotation around Oz
-  let minPhi = -Infinity;
-  let maxPhi = Infinity;
-
-  let theta = Math.PI/2; // angle of rotation around Ox
-  let minTheta = 0;
-  let maxTheta = Math.PI;
-  let mouseX, mouseY, isAltMouseMove;
-  let up = [0, 1, 0]
-  let spareVec3 = [0, 0, 0];
-  let centerPoint = mat4.create();
-  let centerPointPosition = mat4.getTranslation([], centerPoint);
-  let centerRotation = mat4.getRotation([], centerPoint);
-  let sphere = new WireCollection(22, {width: 4, is3D: true, allowColors: true});
-
-  let toUI = sphere.add({
-    from: {x: 0, y: 0, z: 0, color: 0xffffffff},
-    to: {x: 0, y: 0, z: 0, color: 0xffffffff}
-  })
-  let fromUI = sphere.add({
-    from: {x: 0, y: 0, z: 0, color: 0xff00ffff},
-    to: {x: 0, y: 0, z: 0, color: 0xfff00fff}
-  })
-  let crossUI = sphere.add({
-    from: {x: 0, y: 0, z: 0, color: 0xffff00ff},
-    to: {x: 0, y: 0, z: 0, color: 0xffff00ff}
-  })
-  scene.appendChild(sphere)
-
-  let frameRotation = [0, 0, 0, 1];
-  let frameCenterTransition = [0, 0, 0];
-
-  let cameraPosition = view.position;
-
-  document.addEventListener('keydown', (e) => onKey(e, true));
-  document.addEventListener('keyup', (e) => onKey(e, false));
-  document.addEventListener('wheel', handleWheel, {passive: false});
-  document.addEventListener('mousedown', handleMouseDown, {passive: false});
-  requestAnimationFrame(frame);
-  redraw();
-
-  return {
-    dispose: Function.prototype,
-    setViewBox: Function.prototype,
-  };
-
-  function handleMouseDown(e) {
-    let isLeftButton =
-      (e.button === 1 && window.event !== null) || e.button === 0;
-    if (!isLeftButton) return;
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-
-
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-    isAltMouseMove = e.altKey;
-  }
-
-  function onMouseMove(e) {
-
-    let ar = drawContext.width/drawContext.height;
-    if (!isAltMouseMove) {
-      phi += rotationSpeed * (mouseX - e.clientX)/drawContext.width;
-      theta += rotationSpeed * (mouseY - e.clientY)/drawContext.height * ar * 0.5;
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-
-      theta = clamp(theta, minTheta, maxTheta);
-      phi = clamp(phi, minPhi, maxPhi);
-    } else {
-      let p = getOffsetXY(e.clientX, e.clientY);
-      let m = getOffsetXY(mouseX, mouseY);
-      let dy = (p.y - m.y);
-      let dx = ar * (m.x - p.x);
-      // todo: change focal point to match mouse cursor
-
-      // the idea behind this formula is that dx and dy range from [0..1]
-      // (as a ratio of the screen width or height), now we know the FoV angle, 
-      // we want to know how much of the distance we traveled on the frustrum plane.
-      // Distance to frustrum is `r`, thus half length of the frustrum plane
-      // is `r * tan(fov/2)`, we now extend it to full length by performing `2 * `
-      // and take the ratio (dx and dy correspondingly)
-      centerPointPosition[0] += 2 * r * dx * Math.tan(drawContext.fov/2);
-      centerPointPosition[1] += 2 * r * dy * Math.tan(drawContext.fov/2);
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    }
-
-    redraw();
-
-    function toSphere(x, y) {
-      let px = 2 * x / drawContext.width*drawContext.pixelRatio - 1;
-      let py = 1 - 2 * y / drawContext.height*drawContext.pixelRatio;
-      let length = Math.hypot(px, py);
-      if (length > 1) length = 1;
-      let pz = Math.sqrt(1 - length * length);
-      return vec3.normalize([], [px, py, pz]);
-    }
-  }
-
-  function onMouseUp(e) {
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  }
-
-  function getOffsetXY(x, y) {
-    return {x: x/window.innerWidth, y: y/window.innerHeight};
-  }
-
-  function handleWheel(e) {
-    let delta = -e.deltaY;
-    let sign = Math.sign(delta);
-    let speed = 1;
-
-    var deltaAdjustedSpeed = Math.min(0.25, Math.abs(speed * delta / 128));
-    r *= 1 - sign * deltaAdjustedSpeed
-    redraw();
-    e.preventDefault();
-  }
-
-  function onKey(e, isDown) {
-    quat.set(frameRotation, 0, 0, 0, 1);
-    vec3.set(frameCenterTransition, 0, 0, 0);
-    switch(e.which) {
-      case 84: // T 
-        frameRotation[0] = isDown * rotationSpeed; break;
-      case 71: // G
-        frameRotation[0] = -isDown * rotationSpeed; break;
-      case 72: // H
-        frameRotation[1] = isDown * rotationSpeed; break;
-      case 70: // F
-        frameRotation[1] = -isDown * rotationSpeed; break;
-
-      case 37: 
-        frameCenterTransition[0] = -isDown * moveSpeed; break;
-      case 39: 
-        frameCenterTransition[0] = isDown * moveSpeed; break;
-      case 38: 
-        frameCenterTransition[1] = isDown * moveSpeed; break;
-      case 40: 
-        frameCenterTransition[1] = -isDown * moveSpeed; break;
-    }
-
-    quat.normalize(frameRotation, frameRotation);
-
-  }
-
-  function frame() {
-    requestAnimationFrame(frame);
-
-    let changed = frameRotation[0] || frameRotation[1] || frameRotation[2] ||
-        frameCenterTransition[0] || frameCenterTransition[1] || frameCenterTransition[2];
-    if (!changed) return;
-
-    quat.multiply(centerRotation, centerRotation, frameRotation);
-    vec3.add(centerPointPosition, centerPointPosition, frameCenterTransition);
-    redraw();
-  }
-
-  function redraw() {
-    // update camera
-    let p = getSpherical(r, theta, phi);
-    let r1 = Math.hypot(r, 1);
-    let theta1 = theta - Math.acos(r/r1);
-    let p1 = getSpherical(r1, theta1, phi);
-
-    vec3.sub(p1, p1, p);
-
-    vec3.set(cameraPosition, p[0], p[1], p[2]);
-    vec3.add(cameraPosition, cameraPosition, centerPointPosition);
-    mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, p1);
-    mat4.getRotation(view.rotation, view.matrix);
-    // translateOnAxisQuat(cameraPosition, r, [0, 0, 1], centerRotation);
-    // quat.set(view.rotation, centerRotation[0], centerRotation[1], centerRotation[2], centerRotation[3])
-    view.update();
-
-    scene.renderFrame();
-  }
-
-  function translateOnAxisQuat(v, distance, axis, quat) {
-    let translation = vec3.transformQuat(spareVec3, axis, quat);
-    vec3.scaleAndAdd(v, v, translation, distance);
-    return v;
-  }
-}
-
 
 function createCameraImage() {
   let cameraImage = new WireCollection(100, {width:4, is3D: true, allowColors: true});
@@ -363,35 +169,34 @@ function drawCube(lines) {
 }
 
 function drawSomeShape(lines) {
-  let color = 0x33ffff48;
-  let count = 100;
+  let color = 0x33ffffff;
+  let count = 5;
   for (let row = -count; row <= count; ++row) {
     lines.add({
-      from: {x: -count, y: 0, z: -row, color},
-      to: {x: count, y: 0, z: -row, color}
+      from: {x: -count, y: -row, z: 0, color},
+      to: {x: count, y: -row, z: 0, color}
     });
   }
   for (let col = -count; col <= count; ++col) {
     lines.add({
-      from: {x: col, y: 0, z: count, color},
-      to: {x: col, y: 0, z: -count, color}
+      from: {x: col, y: count, z: 0, color},
+      to: {x: col, y: -count, z: 0, color}
     });
   }
+
+  lines.add({
+    from: {x: 0, y: 0, z: 0, color},
+    to: {x: 0, y: 1, z: 0, color: 0xff0000ff}
+  });
+  lines.add({
+    from: {x: 0, y: 0, z: 0, color},
+    to: {x: 1, y: 0, z: 0, color: 0x00ff00ff}
+  });
+  lines.add({
+    from: {x: 0, y: 0, z: 0, color},
+    to: {x: 0, y: 0, z: 1, color: 0x0000ffff}
+  });
   return lines;
-}
-
-function getSpherical(r, theta, phi) {
-  let y = r * Math.cos(theta);
-  let l = r * Math.sin(theta); // = Math.sqrt(r * r - y * y);
-  let x = l * Math.sin(phi);
-  let z = l * Math.cos(phi);
-  return [x, y, z];
-}
-
-function clamp(v, min, max) {
-  if (v < min) v = min;
-  if (v > max) v = max;
-  return v;
 }
 
 function drawGraph(scene) {
