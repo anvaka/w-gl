@@ -6,12 +6,12 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let rotationSpeed = Math.PI * 4;
   let moveSpeed = 0.1;
   let r = 1;
-  // angle of rotation around Oz, tracked from Ox to Oy
-  let phi = -Math.PI/2;
+  // angle of rotation around Y axis, tracked from axis X to axis Z
+  let phi = -Math.PI/2; // Rotate the camera so it looks to the central point in Oxy plane from distance r.
   let minPhi = -Infinity;
   let maxPhi = Infinity;
 
-  // angle of rotation around Oy
+  // camera inclination angle. (Angle above Oxz plane)
   let theta = 0;
   let minTheta = 0;
   let maxTheta = Math.PI;
@@ -128,7 +128,8 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function handleWheel(e) {
-    zoomCenterBy(-e.deltaY);
+    let p = scene.getSceneCoordinate(e.clientX, e.clientY);
+    zoomCenterBy(-e.deltaY, p.x - centerPointPosition[0], p.y - centerPointPosition[1]);
 
     redraw();
     e.preventDefault();
@@ -274,11 +275,8 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function setCenterRotation(new_phi, new_theta) {
-    phi = new_phi;
-    theta = new_theta;
-
-    theta = clamp(theta, minTheta, maxTheta);
-    phi = clamp(phi, minPhi, maxPhi);
+    theta = clamp(new_theta, minTheta, maxTheta);
+    phi = clamp(new_phi, minPhi, maxPhi);
     redraw();
   }
 
@@ -287,26 +285,51 @@ export default function createSpaceMapCamera(scene, drawContext) {
     redraw();
   }
 
-  function zoomCenterBy(delta) {
-    let sign = Math.sign(delta);
+  function zoomCenterBy(delta, dx = 0, dy = 0) {
+    // delta usually a small number 0.01 or -0.01
+    let scaleFactor = Math.sign(delta) * Math.min(0.25, Math.abs(delta / 128));
+    // Which means we either shrink the radius by multiplying it by something < 1
+    // or increase it by multiplying by something > 1.
+    r *= 1 - scaleFactor;
+    // Now let's also move the center closer to the scrolling origin, this gives
+    // better UX, similar to the one seen in maps: Map zooms into point under
+    // mouse cursor.
 
-    var deltaAdjustedSpeed = Math.min(0.25, Math.abs(delta / 128));
-    r *= 1 - sign * deltaAdjustedSpeed
+    // How much should we move the center point?
+    // (dx, dy) is current distance from the scroll point to the center. We should
+    // keep it the same after we scaled! 
+    // dXScaled = dx * (1 - scaleFactor); // this is going to be the distance after we scaled.
+    // newOffsetX = dx - dXScaled; // Thus we move the center by this amount. Which is the same as:
+    // newOffsetX = dx - dx * (1 - scaleFactor) == dx * (1 - 1 + scaleFactor) == dx * scaleFactor;
+    // Thus the formula below:
+    centerPointPosition[0] += dx * scaleFactor;
+    centerPointPosition[1] += dy * scaleFactor;
   }
 
   function redraw() {
-    // update camera
-    let p = getSpherical(r, theta, phi);
+    let newCameraPosition = getSpherical(r, theta, phi);
 
-    let r1 = Math.hypot(r, 1);
-    let theta1 = theta - Math.acos(r/r1);
-    let p1 = getSpherical(r1, theta1, phi);
+    // now we want to know what is an up vector? The idea is that its position
+    // can also be represented in spherical coordinates of a sphere with slightly larger
+    // radius. How much larger? 
+    // Just assume `up` vector length is 1, then the sphere  radius is sqrt(r * r + 1 * 1):
+    let upVectorSphereRadius = Math.hypot(r, 1); // Note: may run into precision error here. 
 
-    vec3.sub(p1, p1, p);
+    // We know a hypotenuse of the new triangle and its size. The angle would be 
+    // `Math.acos(r/upVectorSphereRadius)`, and since we don't care whether up is above or below
+    // the actual `theta`, we pick one direction and stick to it:
+    let upVectorTheta = theta - Math.acos(r/upVectorSphereRadius);
+    // The rotation angle around z axis (phi) is the same as the camera position.
+    let upVector = getSpherical(upVectorSphereRadius, upVectorTheta, phi);
 
-    vec3.set(cameraPosition, p[0], p[1], p[2]);
+    // Finally we know both start of the upVector, and the end of the up vector, let's find the direction:
+    vec3.sub(upVector, upVector, newCameraPosition);
+
+    vec3.set(cameraPosition, newCameraPosition[0], newCameraPosition[1], newCameraPosition[2]);
     vec3.add(cameraPosition, cameraPosition, centerPointPosition);
-    mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, p1);
+
+    // I'd assume this could be simplified? I just don't know and haven't thought yet how:
+    mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
     mat4.getRotation(view.rotation, view.matrix);
     view.update();
 
