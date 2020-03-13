@@ -10,8 +10,7 @@ let scene = createScene(document.querySelector('canvas'), {
 
 //drawGraph(scene);
 
-let someShape = drawSomeShape(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}))
-scene.appendChild(someShape);
+drawSomeShape(scene)
 // let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
 // scene.appendChild(someShape1);
 //let someShape = createCameraImage();
@@ -168,9 +167,10 @@ function drawCube(lines) {
   return lines
 }
 
-function drawSomeShape(lines) {
+function drawSomeShape(scene) {
+  let lines = new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true})
   let color = 0x33ffffff;
-  let count = 5;
+  let count = 50;
   for (let row = -count; row <= count; ++row) {
     lines.add({
       from: {x: -count, y: -row, z: 0, color},
@@ -184,19 +184,22 @@ function drawSomeShape(lines) {
     });
   }
 
-  lines.add({
+  scene.appendChild(lines);
+
+  let orth = new wgl.WireCollection(22, {width: 4, is3D: true, allowColors: true})
+  orth.add({
     from: {x: 0, y: 0, z: 0, color},
-    to: {x: 0, y: 1, z: 0, color: 0xff0000ff}
+    to: {x: 0, y: 5, z: 0, color: 0xff0000ff}
   });
-  lines.add({
+  orth.add({
     from: {x: 0, y: 0, z: 0, color},
-    to: {x: 1, y: 0, z: 0, color: 0x00ff00ff}
+    to: {x: 5, y: 0, z: 0, color: 0x00ff00ff}
   });
-  lines.add({
+  orth.add({
     from: {x: 0, y: 0, z: 0, color},
-    to: {x: 0, y: 0, z: 1, color: 0x0000ffff}
+    to: {x: 0, y: 0, z: 5, color: 0x0000ffff}
   });
-  return lines;
+  scene.appendChild(orth);
 }
 
 function drawGraph(scene) {
