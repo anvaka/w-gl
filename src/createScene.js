@@ -2,7 +2,7 @@ import eventify from 'ngraph.events';
 
 import Element from './Element';
 import onClap from './clap';
-import {mat4, vec4} from 'gl-matrix';
+import {mat4, vec4, quat, vec3} from 'gl-matrix';
 import createMapCamera from './createMapCamera';
 import ViewMatrix from './ViewMatrix';
 
@@ -26,6 +26,7 @@ export default function createScene(canvas, options) {
 
   var view = new ViewMatrix();
   var projection = mat4.create();
+  var inverseProjection = mat4.create();
   var fov = options.fov === undefined ? Math.PI * 45 / 180 : options.fov;
   var near = options.near === undefined ? 0.01 : options.near;
   var far = options.far === undefined ? Infinity : options.far;
@@ -168,6 +169,8 @@ export default function createScene(canvas, options) {
     drawContext.height = height;
     sceneRoot.worldTransformNeedsUpdate = true;
     mat4.perspective(projection, fov, width/height, near, far);
+
+    inverseProjection = mat4.invert(mat4.create(), projection);
     renderFrame();
   }
 
@@ -200,21 +203,27 @@ export default function createScene(canvas, options) {
     let clipSpaceX = (dpr * clientX / width) * 2 - 1;
     let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
 
-    var mvp = mat4.multiply(mat4.create(), projection, view.matrix)
-    mat4.multiply(mvp, mvp, sceneRoot.model);
-    var iMvp = mat4.invert(mat4.create(), mvp);
-    if (!iMvp) {
-      // likely they zoomed out too far for this `near` plane.
-      return;
+    let mx = vec4.transformMat4([], [clipSpaceX, clipSpaceY, 0, 1], inverseProjection);
+    mx[0] /= mx[3]; mx[1] /= mx[3]; mx[2] /= mx[3]; mx[3] /= mx[3];
+    vec4.transformMat4(mx, mx, view.cameraWorld);
+    mx[0] /= mx[3]; mx[1] /= mx[3]; mx[2] /= mx[3]; mx[3] /= mx[3];
+    vec3.sub(mx, mx, view.position);
+    vec3.normalize(mx, mx);
+    var targetZ = 0;
+
+    // TODO: This is likely not going to work for all cases.
+    var distance = (targetZ - view.position[2]) / mx[2];
+    if (mx[2] > 0) {
+      // ray shoots backwards.
+
     }
-    // TODO: This wouldn't work when camera is rotated.
-    // todo: Center is not correct
-    var zero = vec4.transformMat4([], [drawContext.center[0], drawContext.center[1], drawContext.center[2], 1], mvp);
-    const sceneCoordinate =  vec4.transformMat4([], [zero[3] * clipSpaceX, zero[3] * clipSpaceY, zero[2], zero[3]], iMvp);
+
+    vec4.scaleAndAdd(mx, view.position, mx, distance)
+
     return {
-      x: sceneCoordinate[0]/sceneCoordinate[3],
-      y: sceneCoordinate[1]/sceneCoordinate[3],
-      z: sceneCoordinate[2]/sceneCoordinate[3],
+      x: mx[0],
+      y: mx[1],
+      z: mx[2]
     }
   }
 
@@ -231,7 +240,18 @@ export default function createScene(canvas, options) {
   }
 
   function setViewBox(rect) {
-    cameraController.setViewBox(rect);
+    const dpr = drawContext.pixelRatio;
+    const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
+    const {position, rotation} = drawContext.view;
+    position[0] = (rect.left + rect.right)/2;
+    position[1] = (rect.top + rect.bottom)/2;
+    position[2] = nearHeight / Math.tan(drawContext.fov / 2);
+    quat.set(rotation, 0, 0, 0, 1);
+
+    drawContext.view.update();
+    if (cameraController.setViewBox) {
+      cameraController.setViewBox(rect)
+    }
   }
 
   function renderFrame(immediate) {
