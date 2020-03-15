@@ -17,7 +17,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let maxTheta = Math.PI;
 
   let mouseX, mouseY, isAltMouseMove;
-  let centerPointPosition = [0, 0, 0];
+  let centerPointPosition = drawContext.center;// [0, 0, 0];
 
   let frameRotation = [0, 0, 0]; // r, theta, phi
   let frameCenterTransition = [0, 0, 0];
@@ -38,8 +38,16 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
   return {
     dispose,
-    setViewBox: Function.prototype,
+    setViewBox,
   };
+
+  function setViewBox() {
+    cameraPosition = view.position;
+    r = Math.hypot(cameraPosition[2]);
+    centerPointPosition = [cameraPosition[0], cameraPosition[1], 0]
+    theta = 0;
+    phi = -Math.PI/2;
+  }
 
   function dispose() {
     document.removeEventListener('keydown', handleKeyDown); 
@@ -79,6 +87,20 @@ export default function createSpaceMapCamera(scene, drawContext) {
       rotateAnimation.start();
     } else {
       panAnimation.start();
+    }
+  }
+
+  function getZoomPlaneIntersection(clientX, clientY) {
+    let viewPoint = scene.getSceneCoordinate(clientX, clientY);
+    let ray = vec3.sub([], [viewPoint.x, viewPoint.y, viewPoint.z], cameraPosition);
+    vec3.normalize(ray, ray);
+
+    let normal = [0, 0, 1];
+    let denom = vec3.dot(normal, ray);
+    if (Math.abs(denom) > 1e-7) {
+      let t = vec3.dot(vec3.sub([], centerPointPosition, cameraPosition), normal)/denom;
+      let isect = vec3.scaleAndAdd([], cameraPosition, ray, t);
+      return isect;
     }
   }
 
@@ -128,8 +150,8 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function handleWheel(e) {
-    let p = scene.getSceneCoordinate(e.clientX, e.clientY);
-    zoomCenterBy(-e.deltaY, p.x - centerPointPosition[0], p.y - centerPointPosition[1]);
+    let p = getZoomPlaneIntersection(e.clientX, e.clientY)
+    zoomCenterBy(-e.deltaY, p[0] - centerPointPosition[0], p[1] - centerPointPosition[1]);
 
     redraw();
     e.preventDefault();
@@ -332,7 +354,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
     mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
     mat4.getRotation(view.rotation, view.matrix);
     view.update();
-
     scene.renderFrame();
   }
 }
@@ -352,4 +373,8 @@ function clamp(v, min, max) {
 
 function isModifierKey(e) {
   return e.altKey || e.ctrlKey || e.metaKey;
+}
+
+function _(v) {
+  return v.map(x => Math.round(x * 1000) / 1000).join(', ')
 }
