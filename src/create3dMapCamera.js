@@ -3,13 +3,14 @@ import createKineticAnimation from './animation/createKineticAnimation';
 
 export default function createSpaceMapCamera(scene, drawContext) {
   let view = drawContext.view;
-  let rotationSpeed = Math.PI * 4;
+  let rotationSpeed = Math.PI * 2;
   let moveSpeed = 0.1;
   let r = 1;
   // angle of rotation around Y axis, tracked from axis X to axis Z
   let phi = -Math.PI/2; // Rotate the camera so it looks to the central point in Oxy plane from distance r.
   let minPhi = -Infinity;
   let maxPhi = Infinity;
+  let planeNormal = [0, 0, 1];
 
   // camera inclination angle. (Angle above Oxz plane)
   let theta = 0;
@@ -23,11 +24,16 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let frameCenterTransition = [0, 0, 0];
 
   let cameraPosition = view.position;
+  // let basePanAmplitude = 0.00
   let panAnimation = createKineticAnimation(getCenterPosition, setCenterPosition); 
+  let panAmplitude = panAnimation.getAmplitude();
+
   let rotateAnimation = createKineticAnimation(getCenterRotation, setCenterRotation, {
     minVelocity: 1
   }); 
+  let rotationAmplitude = rotationAmplitude.getAmplitude();
 
+  // this is for debugging
   document.addEventListener('keydown', handleKeyDown); 
   document.addEventListener('keyup', handleKeyUp);
   document.addEventListener('wheel', handleWheel, {passive: false});
@@ -80,7 +86,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
     mouseX = e.clientX;
     mouseY = e.clientY;
-    isAltMouseMove = !e.altKey;
+    isAltMouseMove = e.altKey;
     panAnimation.cancel();
     rotateAnimation.cancel();
     if (isAltMouseMove) {
@@ -95,10 +101,9 @@ export default function createSpaceMapCamera(scene, drawContext) {
     let ray = vec3.sub([], [viewPoint.x, viewPoint.y, viewPoint.z], cameraPosition);
     vec3.normalize(ray, ray);
 
-    let normal = [0, 0, 1];
-    let denom = vec3.dot(normal, ray);
+    let denom = vec3.dot(planeNormal, ray);
     if (Math.abs(denom) > 1e-7) {
-      let t = vec3.dot(vec3.sub([], centerPointPosition, cameraPosition), normal)/denom;
+      let t = vec3.dot(vec3.sub([], centerPointPosition, cameraPosition), planeNormal)/denom;
       let isect = vec3.scaleAndAdd([], cameraPosition, ray, t);
       return isect;
     }
@@ -117,6 +122,8 @@ export default function createSpaceMapCamera(scene, drawContext) {
       let m = getOffsetXY(mouseX, mouseY);
       let dy = (p.y - m.y);
       let dx = ar * (m.x - p.x);
+
+
       // todo: change focal point to match mouse cursor
 
       // the idea behind this formula is that dx and dy range from [0..1]
@@ -231,7 +238,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
       } else if (frameCenterTransition[0] == frameCenterTransition[1] &&
         frameCenterTransition[1] === 0) {
         panAnimation.stop();
-        panAnimation.setAmplitude(0.025);
+        panAnimation.setAmplitude(panAmplitude);
       }
     }
     if (rotationAnimation) {

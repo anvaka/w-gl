@@ -9,7 +9,7 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
   let EPS = 1e-3;
 
   let minVelocity = typeof settings.minVelocity === 'number' ? settings.minVelocity : EPS;
-  let amplitude = typeof settings.amplitude === 'number' ? settings.amplitude : 0.025;
+  let amplitude = typeof settings.amplitude === 'number' ? settings.amplitude : 0.01;
   let cancelAnimationFrame = typeof settings.cancelAnimationFrame === 'function' ? settings.cancelAnimationFrame : getCancelAnimationFrame();
   let requestAnimationFrame = typeof settings.requestAnimationFrame === 'function' ? settings.requestAnimationFrame : getRequestAnimationFrame();
 
@@ -27,12 +27,17 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
   return {
     start,
     setAmplitude,
+    getAmplitude,
     stop,
     cancel
   };
 
   function setAmplitude(newAmplitude) {
     amplitude = newAmplitude;
+  }
+
+  function getAmplitude() {
+    return amplitude;
   }
 
   function cancel() {
