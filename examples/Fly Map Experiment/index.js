@@ -4,13 +4,23 @@
 const {createScene, WireCollection, createGameCamera, create3dMapCamera, PointCollection} = window.wgl;
 const {mat4, quat, vec3} = glMatrix;
 
+let upCollection = new WireCollection(10, {
+  is3D: true,
+  width: 4,
+  allowColors: true
+});
+window.up = upCollection.add({
+  from: {x: 0, y: 0, z: 0, color: 0xff0000ff},
+  to: {x: 0, y: 1, z: 0, color: 0xff00ffff},
+})
 let scene = createScene(document.querySelector('canvas'), {
   camera: create3dMapCamera
 });
-
 //drawGraph(scene);
 
-drawSomeShape(scene)
+
+drawGrid(scene)
+// scene.appendChild(upCollection)
 // let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
 // scene.appendChild(someShape1);
 //let someShape = createCameraImage();
@@ -167,39 +177,31 @@ function drawCube(lines) {
   return lines
 }
 
-function drawSomeShape(scene) {
-  let lines = new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true})
-  let color = 0x33ffffff;
-  let count = 50;
-  for (let row = -count; row <= count; ++row) {
+function drawGrid(scene) {
+  let count = 100;
+  appendGrid(scene, -count, count, 1, 1.5, 0x113333ff);
+  appendGrid(scene, -count, count, 5, 3, 0x226666ff);
+  appendGrid(scene, -count, count, 10, 4, 0x229999ff);
+}
+
+function appendGrid(scene, from, to, step, width, color) {
+  let count = Math.ceil(2 * Math.abs(to - from) / step);
+
+  let lines = new wgl.WireCollection(count, {width, is3D: true, allowColors: true})
+  for (let row = from; row <= to; row += step) {
     lines.add({
-      from: {x: -count, y: -row, z: 0, color},
-      to: {x: count, y: -row, z: 0, color}
+      from: {x: from, y: row, z: 0, color},
+      to: {x: to, y: row, z: 0, color}
     });
   }
-  for (let col = -count; col <= count; ++col) {
+  for (let col = from; col <= to; col += step) {
     lines.add({
-      from: {x: col, y: count, z: 0, color},
-      to: {x: col, y: -count, z: 0, color}
+      from: {x: col, y: from, z: 0, color},
+      to: {x: col, y: to, z: 0, color}
     });
   }
 
   scene.appendChild(lines);
-
-  let orth = new wgl.WireCollection(22, {width: 4, is3D: true, allowColors: true})
-  orth.add({
-    from: {x: 0, y: 0, z: 0, color},
-    to: {x: 0, y: 5, z: 0, color: 0xff0000ff}
-  });
-  orth.add({
-    from: {x: 0, y: 0, z: 0, color},
-    to: {x: 5, y: 0, z: 0, color: 0x00ff00ff}
-  });
-  orth.add({
-    from: {x: 0, y: 0, z: 0, color},
-    to: {x: 0, y: 0, z: 5, color: 0x0000ffff}
-  });
-  scene.appendChild(orth);
 }
 
 function drawGraph(scene) {
