@@ -1,5 +1,6 @@
 import {vec3, mat4} from 'gl-matrix';
 import createKineticAnimation from './animation/createKineticAnimation';
+import createTouchController from './createTouchController';
 
 export default function createSpaceMapCamera(scene, drawContext) {
   let view = drawContext.view;
@@ -31,11 +32,18 @@ export default function createSpaceMapCamera(scene, drawContext) {
     minVelocity: 1
   }); 
   let rotationAmplitude = rotateAnimation.getAmplitude();
+  let inputTarget = drawContext.canvas;
 
-  document.addEventListener('keydown', handleKeyDown); 
-  document.addEventListener('keyup', handleKeyUp);
-  document.addEventListener('wheel', handleWheel, {passive: false});
-  document.addEventListener('mousedown', handleMouseDown, {passive: false});
+  inputTarget.addEventListener('keydown', handleKeyDown); 
+  inputTarget.addEventListener('keyup', handleKeyUp);
+  inputTarget.addEventListener('wheel', handleWheel, {passive: false});
+  inputTarget.addEventListener('mousedown', handleMouseDown, {passive: false});
+
+  let touchController = createTouchController(inputTarget);
+  touchController.on('pan', handleTouchPan);
+  touchController.on('touchstart', handleTouchStart);
+  touchController.on('touchend', handleTouchEnd);
+  touchController.on('zoom', zoomToClientCoordinates)
 
   requestAnimationFrame(frame);
   redraw();
@@ -54,16 +62,17 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function dispose() {
-    document.removeEventListener('keydown', handleKeyDown); 
-    document.removeEventListener('keyup', handleKeyUp);
-    document.removeEventListener('wheel', handleWheel, {passive: false});
-    document.removeEventListener('mousedown', handleMouseDown, {passive: false});
+    inputTarget.removeEventListener('keydown', handleKeyDown); 
+    inputTarget.removeEventListener('keyup', handleKeyUp);
+    inputTarget.removeEventListener('wheel', handleWheel, {passive: false});
+    inputTarget.removeEventListener('mousedown', handleMouseDown, {passive: false});
 
     // TODO: Should I be more precise here?
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
     rotateAnimation.cancel();
     panAnimation.cancel();
+    touchController.dispose();
   }
 
   function handleKeyDown(e) {
@@ -85,8 +94,10 @@ export default function createSpaceMapCamera(scene, drawContext) {
     mouseX = e.clientX;
     mouseY = e.clientY;
     isAltMouseMove = e.altKey;
+
     panAnimation.cancel();
     rotateAnimation.cancel();
+
     if (isAltMouseMove) {
       rotateAnimation.start();
     } else {
@@ -116,28 +127,43 @@ export default function createSpaceMapCamera(scene, drawContext) {
       theta = clamp(theta, minTheta, maxTheta);
       phi = clamp(phi, minPhi, maxPhi);
     } else {
-      let p = getOffsetXY(e.clientX, e.clientY);
-      let m = getOffsetXY(mouseX, mouseY);
-      let dy = (p.y - m.y);
-      let dx = ar * (m.x - p.x);
-
-
-      // todo: change focal point to match mouse cursor
-
-      // the idea behind this formula is that dx and dy range from [0..1]
-      // (as a ratio of the screen width or height), now we know the FoV angle, 
-      // we want to know how much of the distance we traveled on the frustrum plane.
-      // Distance to frustrum is `r`, thus half length of the frustrum plane
-      // is `r * tan(fov/2)`, we now extend it to full length by performing `2 * `
-      // and take the ratio (dx and dy correspondingly)
-      let x = 2 * r * dx * Math.tan(drawContext.fov/2);
-      let y = 2 * r * dy * Math.tan(drawContext.fov/2);
-      moveCenterBy(-x, -y);
+      let dy = e.clientY - mouseY; 
+      let dx =(e.clientX - mouseX);
+      panByAbsoluteOffset(dx, dy);
     }
+
     mouseX = e.clientX;
     mouseY = e.clientY;
 
     redraw();
+  }
+
+  function handleTouchStart() {
+    panAnimation.cancel();
+    panAnimation.start();
+  }
+
+  function handleTouchEnd() {
+    panAnimation.stop();
+  }
+
+  function handleTouchPan(dx, dy) {
+    panByAbsoluteOffset(dx, dy);
+    redraw();
+  }
+
+  function panByAbsoluteOffset(dx, dy) {
+    let ar = drawContext.width/drawContext.height;
+    // the idea behind this formula is that dx and dy range from [0..1]
+    // (as a ratio of the screen width or height), now we know the FoV angle, 
+    // we want to know how much of the distance we traveled on the frustrum plane.
+    // Distance to frustrum is `r`, thus half length of the frustrum plane
+    // is `r * tan(fov/2)`, we now extend it to full length by performing `2 * `
+    // and take the ratio (dx and dy correspondingly)
+    let fCoefficient = 2 * r * Math.tan(drawContext.fov/2);
+    let x = ar * fCoefficient * dx / window.innerWidth;
+    let y = fCoefficient * dy / window.innerHeight;
+    moveCenterBy(x, -y); // WebGL Y is not the same as typical DOM Y.
   }
 
   function onMouseUp() {
@@ -150,15 +176,18 @@ export default function createSpaceMapCamera(scene, drawContext) {
     }
   }
 
-  function getOffsetXY(x, y) {
-    return {x: x/window.innerWidth, y: y/window.innerHeight};
+  function zoomToClientCoordinates(clientX, clientY, scaleFactor) {
+    document.querySelector('.x').innerText = `center: (${clientX}, ${clientY}); Scale: ${scaleFactor}`
+    let p = getZoomPlaneIntersection(clientX, clientY)
+    zoomCenterByScaleFactor(scaleFactor, p[0] - centerPointPosition[0], p[1] - centerPointPosition[1]);
+
+    redraw();
   }
 
   function handleWheel(e) {
-    let p = getZoomPlaneIntersection(e.clientX, e.clientY)
-    zoomCenterBy(-e.deltaY, p[0] - centerPointPosition[0], p[1] - centerPointPosition[1]);
+    let scaleFactor = getScaleFactorFromDelta(-e.deltaY);
+    zoomToClientCoordinates(e.clientX, e.clientY, scaleFactor);
 
-    redraw();
     e.preventDefault();
   }
 
@@ -270,7 +299,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     phi = clamp(phi, minPhi, maxPhi);
 
     if (frameRotation[0]) {
-      zoomCenterBy(frameRotation[0])
+      zoomCenterByDelta(frameRotation[0])
     }
     theta += frameRotation[1] * Math.PI/180;
     theta = clamp(theta, minTheta, maxTheta);
@@ -312,13 +341,21 @@ export default function createSpaceMapCamera(scene, drawContext) {
     redraw();
   }
 
-  function zoomCenterBy(delta, dx = 0, dy = 0) {
-    // delta usually a small number 0.01 or -0.01
-    let scaleFactor = Math.sign(delta) * Math.min(0.25, Math.abs(delta / 128));
-    // Which means we either shrink the radius by multiplying it by something < 1
+  function zoomCenterByDelta(delta, dx = 0, dy = 0) {
+    // delta usually is a small number 0.01 or -0.01
+    let scaleFactor = getScaleFactorFromDelta(delta);
+    zoomCenterByScaleFactor(scaleFactor, dx, dy)
+  }
+
+  function getScaleFactorFromDelta(delta) {
+    return Math.sign(delta) * Math.min(0.25, Math.abs(delta / 128));
+  }
+
+  function zoomCenterByScaleFactor(scaleFactor, dx, dy) {
+    // `scaleFactor` defines whether we shrink the radius by multiplying it by something < 1
     // or increase it by multiplying by something > 1.
     r *= 1 - scaleFactor;
-    // Now let's also move the center closer to the scrolling origin, this gives
+    // let's also move the center closer to the scrolling origin, this gives
     // better UX, similar to the one seen in maps: Map zooms into point under
     // mouse cursor.
 
