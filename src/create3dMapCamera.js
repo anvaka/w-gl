@@ -30,7 +30,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let rotateAnimation = createKineticAnimation(getCenterRotation, setCenterRotation, {
     minVelocity: 1
   }); 
-  let rotationAmplitude = rotationAmplitude.getAmplitude();
+  let rotationAmplitude = rotateAnimation.getAmplitude();
 
   document.addEventListener('keydown', handleKeyDown); 
   document.addEventListener('keyup', handleKeyUp);
