@@ -24,7 +24,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let frameCenterTransition = [0, 0, 0];
 
   let cameraPosition = view.position;
-  // let basePanAmplitude = 0.00
   let panAnimation = createKineticAnimation(getCenterPosition, setCenterPosition); 
   let panAmplitude = panAnimation.getAmplitude();
 
@@ -33,7 +32,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }); 
   let rotationAmplitude = rotationAmplitude.getAmplitude();
 
-  // this is for debugging
   document.addEventListener('keydown', handleKeyDown); 
   document.addEventListener('keyup', handleKeyUp);
   document.addEventListener('wheel', handleWheel, {passive: false});
