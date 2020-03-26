@@ -171,7 +171,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function rotateByAbsoluteOffset(dx, dy) {
-    document.querySelector('.x').innerText = `${dx}, ${dy}`
     let ar = drawContext.width / drawContext.height;
 
     phi -= rotationSpeed * dx / drawContext.width;
