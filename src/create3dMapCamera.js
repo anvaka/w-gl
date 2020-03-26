@@ -5,6 +5,7 @@ import createTouchController from './createTouchController';
 export default function createSpaceMapCamera(scene, drawContext) {
   let view = drawContext.view;
   let rotationSpeed = Math.PI * 2;
+  let inclinationSpeed = Math.PI * 1.618;
   let moveSpeed = 0.1;
   let r = 1;
   // angle of rotation around Y axis, tracked from axis X to axis Z
@@ -29,10 +30,14 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let panAmplitude = panAnimation.getAmplitude();
 
   let rotateAnimation = createKineticAnimation(getCenterRotation, setCenterRotation, {
-    minVelocity: 1
+    minVelocity: 1,
+    amplitude: 0.0025
   }); 
   let rotationAmplitude = rotateAnimation.getAmplitude();
   let inputTarget = drawContext.canvas;
+  if (!inputTarget.getAttribute('tabindex')) {
+    inputTarget.setAttribute('tabindex', 0);
+  }
 
   inputTarget.addEventListener('keydown', handleKeyDown); 
   inputTarget.addEventListener('keyup', handleKeyUp);
@@ -43,7 +48,9 @@ export default function createSpaceMapCamera(scene, drawContext) {
   touchController.on('pan', handleTouchPan);
   touchController.on('touchstart', handleTouchStart);
   touchController.on('touchend', handleTouchEnd);
-  touchController.on('zoom', zoomToClientCoordinates)
+  touchController.on('zoomChange', zoomToClientCoordinates);
+  touchController.on('angleChange', handleAngleChange);
+  touchController.on('altPan', handleAltPan);
 
   requestAnimationFrame(frame);
   redraw();
@@ -119,16 +126,12 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function onMouseMove(e) {
-    let ar = drawContext.width/drawContext.height;
-    if (isAltMouseMove) {
-      phi += rotationSpeed * (mouseX - e.clientX)/drawContext.width;
-      theta += rotationSpeed * (mouseY - e.clientY)/drawContext.height * ar * 0.5;
+    let dy = e.clientY - mouseY; 
+    let dx = e.clientX - mouseX;
 
-      theta = clamp(theta, minTheta, maxTheta);
-      phi = clamp(phi, minPhi, maxPhi);
+    if (isAltMouseMove) {
+      rotateByAbsoluteOffset(dx, dy);
     } else {
-      let dy = e.clientY - mouseY; 
-      let dx =(e.clientX - mouseX);
       panByAbsoluteOffset(dx, dy);
     }
 
@@ -138,18 +141,44 @@ export default function createSpaceMapCamera(scene, drawContext) {
     redraw();
   }
 
-  function handleTouchStart() {
-    panAnimation.cancel();
-    panAnimation.start();
+  function handleAngleChange(angleChange) {
+    phi = clamp(phi + angleChange, minPhi, maxPhi);
+    redraw();
   }
 
-  function handleTouchEnd() {
-    panAnimation.stop();
+  function handleTouchStart(touches) {
+    panAnimation.cancel();
+    if (touches.length === 1) {
+      // only when one touch is active we want to have inertia
+      panAnimation.start();
+    }
+  }
+
+  function handleTouchEnd(activeTouches) {
+    if (activeTouches.length < 2) {
+      panAnimation.stop();
+    }
   }
 
   function handleTouchPan(dx, dy) {
     panByAbsoluteOffset(dx, dy);
     redraw();
+  }
+
+  function handleAltPan(dx, dy) {
+    rotateByAbsoluteOffset(dx, dy);
+    redraw();
+  }
+
+  function rotateByAbsoluteOffset(dx, dy) {
+    document.querySelector('.x').innerText = `${dx}, ${dy}`
+    let ar = drawContext.width / drawContext.height;
+
+    phi -= rotationSpeed * dx / drawContext.width;
+    theta -= inclinationSpeed * dy / drawContext.height * ar;
+
+    theta = clamp(theta, minTheta, maxTheta);
+    phi = clamp(phi, minPhi, maxPhi);
   }
 
   function panByAbsoluteOffset(dx, dy) {
@@ -177,7 +206,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function zoomToClientCoordinates(clientX, clientY, scaleFactor) {
-    document.querySelector('.x').innerText = `center: (${clientX}, ${clientY}); Scale: ${scaleFactor}`
     let p = getZoomPlaneIntersection(clientX, clientY)
     zoomCenterByScaleFactor(scaleFactor, p[0] - centerPointPosition[0], p[1] - centerPointPosition[1]);
 
@@ -260,7 +288,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
     if (positionAnimation) {
       if (isDown) {
-        panAnimation.setAmplitude(0.025/8);
+        panAnimation.setAmplitude(panAmplitude/8);
         panAnimation.start();
       } else if (frameCenterTransition[0] == frameCenterTransition[1] &&
         frameCenterTransition[1] === 0) {
@@ -270,14 +298,14 @@ export default function createSpaceMapCamera(scene, drawContext) {
     }
     if (rotationAnimation) {
       if (isDown) {
-        rotateAnimation.setAmplitude(0.025/8);
+        panAnimation.setAmplitude(panAmplitude/8);
         rotateAnimation.start();
       } else if (frameRotation[0] == frameRotation[1] &&
         frameRotation[1] === frameRotation[2] &&
         frameRotation[2] === 0
       ) {
         rotateAnimation.stop();
-        rotateAnimation.setAmplitude(0.025);
+        rotateAnimation.setAmplitude(rotationAmplitude);
       }
     }
   }

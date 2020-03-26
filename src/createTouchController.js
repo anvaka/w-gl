@@ -40,9 +40,10 @@ export default function createTouchController(inputTarget) {
   function handleTouchStart(e) {
     if (!listening) {
       startDocumentTouchListeners();
-      api.fire('touchstart');
       listening = true;
     }
+
+    api.fire('touchstart', e.touches);
 
     for (let i = 0; i < e.touches.length; ++i) {
       let touch = e.touches[i];
@@ -54,39 +55,51 @@ export default function createTouchController(inputTarget) {
   }
 
   function handleTouchMove(e) {
-    let touches = e.changedTouches;
-    let changedCount = 0;
+
     let dx = 0; let dy = 0; // total difference between touches.
     let cx = 0; let cy = 0; // center of the touches
-    let first, second;
+    let first, second, third; // fingers.
 
+    let touches = e.touches;
     for (let i = 0; i < touches.length; ++i) {
       let touch = touches[i];
       let state = activeTouches.get(touch.identifier);
       if (!state) {
-        // We never tracked this touch. Ignore it.
+        // We never tracked this touch - how is this even possible?
         continue;
       }
+
       state.move(touch);
 
       cx += state.x; cy += state.y;
-
       dx += state.x - state.lastX;
       dy += state.y - state.lastY;
 
-      changedCount += 1;
       if (!first) first = state;
       else if (!second) second = state;
+      else if (!third) third = state;
     }
 
+    let changedCount = touches.length;
     dx /= changedCount; dy /= changedCount; 
     cx /= changedCount; cy /= changedCount;
 
-    if (first && second) {
-      // todo: find something better than this?
-      let sx = Math.hypot(first.x - second.x, first.y - second.y) /
-        Math.hypot(first.lastX - second.lastX, first.lastY - second.lastY);
-      api.fire('zoom', cx, cy, sx - 1);
+    // todo: find something better than `first` and `second` tracking
+    if (first && second && third) {
+      api.fire('altPan', dx, dy);
+    } else if (first && second) {
+      let dx = second.x - first.x;
+      let dy = second.y - first.y;
+
+      let lastDx = second.lastX - first.lastX;
+      let lastDy = second.lastY - first.lastY;
+
+      let zoomChange = Math.hypot(dx, dy) / Math.hypot(lastDx, lastDy) - 1;
+      api.fire('zoomChange', cx, cy, zoomChange);
+
+      let angle = Math.atan2(dy, dx) - Math.atan2(lastDy, lastDx); 
+      api.fire('angleChange', angle)
+
       e.preventDefault();
       e.stopPropagation();
     }
@@ -107,7 +120,7 @@ export default function createTouchController(inputTarget) {
     if (activeTouches.size === 0) {
       listening = false;
       stopDocumentTouchListeners();
-      api.fire('touchend');
+      api.fire('touchend', e.touches);
     }
   }
 
