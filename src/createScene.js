@@ -5,6 +5,7 @@ import onClap from './clap';
 import {mat4, vec4, quat, vec3} from 'gl-matrix';
 import createMapCamera from './createMapCamera';
 import ViewMatrix from './ViewMatrix';
+import createSpaceMapCamera from './createSpaceMapCamera';
 
 export default function createScene(canvas, options) {
   var width;
@@ -64,12 +65,13 @@ export default function createScene(canvas, options) {
 
     getCamera,
     setCamera,
-    getDrawContext
+
+    getDrawContext,
+    getOptions
   });
 
-
   sceneRoot.bindScene(api);
-  let cameraController = (options.camera || createMapCamera)(api, drawContext);
+  let cameraController = (options.camera || createSpaceMapCamera)(api, drawContext);
 
   var disposeClick;
   listenToEvents();
@@ -84,6 +86,10 @@ export default function createScene(canvas, options) {
 
   function getDrawContext() {
     return drawContext;
+  }
+
+  function getOptions() {
+    return options;
   }
 
   function setPixelRatio(newPixelRatio) {

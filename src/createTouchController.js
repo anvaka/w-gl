@@ -17,12 +17,24 @@ class TouchState {
   }
 }
 
-export default function createTouchController(inputTarget) {
-  let api = eventify({
-    dispose
-  });
+// When two fingers touch the scene we want to "lock" interaction to either rotation
+// or scaling. These constants represent "locked" state.
+const UNKNOWN = 0; // here we don't know yet. Collect more input to make a decision
+const ZOOM = 1;    // Locked to zooming.
+const ROTATE = 2;  // Locked to rotation.
+
+export default function createTouchController(inputTarget, allowRotation) {
+  let api = eventify({dispose});
+
   let listening = false;
   let activeTouches = new Map();
+  let twoTouchMode = UNKNOWN;
+
+  // for two fingers mode detection we are using moving averages of total scaling
+  // and total rotation. As soon as either of them exceeds a threshold, we lock the 
+  // `twoTouchMode` to either scaling or rotation.
+  let totalScale = 0;
+  let totalRotation = 0;
 
   listenToEvents();
 
@@ -48,6 +60,11 @@ export default function createTouchController(inputTarget) {
     for (let i = 0; i < e.touches.length; ++i) {
       let touch = e.touches[i];
       activeTouches.set(touch.identifier, new TouchState(touch));
+    }
+
+    if (e.touches.length === 2) {
+      totalScale = 0;
+      totalRotation = 0;
     }
 
     e.stopPropagation();
@@ -85,7 +102,7 @@ export default function createTouchController(inputTarget) {
     cx /= changedCount; cy /= changedCount;
 
     // todo: find something better than `first` and `second` tracking
-    if (first && second && third) {
+    if (first && second && third && allowRotation) {
       api.fire('altPan', dx, dy);
     } else if (first && second) {
       let dx = second.x - first.x;
@@ -95,10 +112,18 @@ export default function createTouchController(inputTarget) {
       let lastDy = second.lastY - first.lastY;
 
       let zoomChange = Math.hypot(dx, dy) / Math.hypot(lastDx, lastDy) - 1;
-      api.fire('zoomChange', cx, cy, zoomChange);
-
       let angle = Math.atan2(dy, dx) - Math.atan2(lastDy, lastDx); 
-      api.fire('angleChange', angle)
+
+      totalScale = totalScale * 0.2 + 0.8 * Math.abs(zoomChange);
+      totalRotation = totalRotation * 0.2 + 0.8 * Math.abs(angle);
+
+      if (twoTouchMode === UNKNOWN) {
+        if (!allowRotation || totalScale > 0.01) twoTouchMode = ZOOM;
+        else if (totalRotation > 0.0025) twoTouchMode = ROTATE;
+      }
+
+      if (twoTouchMode === ZOOM) api.fire('zoomChange', cx, cy, zoomChange);
+      if (twoTouchMode === ROTATE) api.fire('angleChange', angle)
 
       e.preventDefault();
       e.stopPropagation();
@@ -121,6 +146,9 @@ export default function createTouchController(inputTarget) {
       listening = false;
       stopDocumentTouchListeners();
       api.fire('touchend', e.touches);
+    }
+    if (activeTouches.size < 2) {
+      twoTouchMode = UNKNOWN;
     }
   }
 

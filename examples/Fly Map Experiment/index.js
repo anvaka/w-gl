@@ -1,7 +1,7 @@
 /**
  * Please ignore this. I'm still learning quaternions, and matrices and stuff.
  */
-const {createScene, WireCollection, createGameCamera, create3dMapCamera, PointCollection} = window.wgl;
+const {createScene, WireCollection, createGameCamera, createSpaceMapCamera, PointCollection} = window.wgl;
 const {mat4, quat, vec3} = glMatrix;
 
 let upCollection = new WireCollection(10, {
@@ -14,9 +14,9 @@ window.up = upCollection.add({
   to: {x: 0, y: 1, z: 0, color: 0xff00ffff},
 })
 let scene = createScene(document.querySelector('canvas'), {
-  camera: create3dMapCamera
+  allowRotation: false
 });
-//drawGraph(scene);
+// drawGraph(scene);
 
 
 drawGrid(scene)

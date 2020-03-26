@@ -6,6 +6,10 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let view = drawContext.view;
   let rotationSpeed = Math.PI * 2;
   let inclinationSpeed = Math.PI * 1.618;
+
+  let sceneOptions = scene.getOptions();
+  let allowRotation = sceneOptions.allowRotation === undefined ? true : !!scene.allowRotation;
+
   let moveSpeed = 0.1;
   let r = 1;
   // angle of rotation around Y axis, tracked from axis X to axis Z
@@ -30,8 +34,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let panAmplitude = panAnimation.getAmplitude();
 
   let rotateAnimation = createKineticAnimation(getCenterRotation, setCenterRotation, {
-    minVelocity: 1,
-    amplitude: 0.0025
+    minVelocity: 1
   }); 
   let rotationAmplitude = rotateAnimation.getAmplitude();
   let inputTarget = drawContext.canvas;
@@ -44,13 +47,13 @@ export default function createSpaceMapCamera(scene, drawContext) {
   inputTarget.addEventListener('wheel', handleWheel, {passive: false});
   inputTarget.addEventListener('mousedown', handleMouseDown, {passive: false});
 
-  let touchController = createTouchController(inputTarget);
+  let touchController = createTouchController(inputTarget, allowRotation);
   touchController.on('pan', handleTouchPan);
+  touchController.on('altPan', handleAltPan);
   touchController.on('touchstart', handleTouchStart);
   touchController.on('touchend', handleTouchEnd);
   touchController.on('zoomChange', zoomToClientCoordinates);
   touchController.on('angleChange', handleAngleChange);
-  touchController.on('altPan', handleAltPan);
 
   requestAnimationFrame(frame);
   redraw();
@@ -100,7 +103,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
     mouseX = e.clientX;
     mouseY = e.clientY;
-    isAltMouseMove = e.altKey;
+    isAltMouseMove = e.altKey && allowRotation;
 
     panAnimation.cancel();
     rotateAnimation.cancel();
@@ -171,6 +174,8 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function rotateByAbsoluteOffset(dx, dy) {
+    if (!allowRotation) return;
+
     let ar = drawContext.width / drawContext.height;
 
     phi -= rotationSpeed * dx / drawContext.width;
