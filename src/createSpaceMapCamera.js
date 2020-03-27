@@ -1,27 +1,31 @@
 import {vec3, mat4} from 'gl-matrix';
+import animate from 'amator';
 import createKineticAnimation from './animation/createKineticAnimation';
 import createTouchController from './createTouchController';
+
 
 export default function createSpaceMapCamera(scene, drawContext) {
   let view = drawContext.view;
   let rotationSpeed = Math.PI * 2;
   let inclinationSpeed = Math.PI * 1.618;
 
-  let sceneOptions = scene.getOptions();
+  let sceneOptions = scene.getOptions() || {};
   let allowRotation = sceneOptions.allowRotation === undefined ? true : !!scene.allowRotation;
 
   let moveSpeed = 0.1;
   let r = 1;
   // angle of rotation around Y axis, tracked from axis X to axis Z
-  let phi = -Math.PI/2; // Rotate the camera so it looks to the central point in Oxy plane from distance r.
-  let minPhi = -Infinity;
-  let maxPhi = Infinity;
+  let minPhi = option(sceneOptions.minPhi, -Infinity);
+  let maxPhi = option(sceneOptions.maxPhi, Infinity);
+   // Rotate the camera so it looks to the central point in Oxy plane from distance r.
+  let phi = clamp(-Math.PI/2, minPhi, maxPhi);
+
   let planeNormal = [0, 0, 1];
 
   // camera inclination angle. (Angle above Oxz plane)
-  let theta = 0;
-  let minTheta = 0;
-  let maxTheta = Math.PI;
+  let minTheta = option(sceneOptions.minTheta, 0);
+  let maxTheta = option(sceneOptions.maxTheta, Math.PI);
+  let theta = clamp(0, minTheta, maxTheta);
 
   let mouseX, mouseY, isAltMouseMove;
   let centerPointPosition = drawContext.center;// [0, 0, 0];
@@ -46,12 +50,15 @@ export default function createSpaceMapCamera(scene, drawContext) {
   inputTarget.addEventListener('keyup', handleKeyUp);
   inputTarget.addEventListener('wheel', handleWheel, {passive: false});
   inputTarget.addEventListener('mousedown', handleMouseDown, {passive: false});
+  inputTarget.addEventListener('dblclick', handleDoubleClick, {passive: false});
 
-  let touchController = createTouchController(inputTarget, allowRotation);
+  let touchController = createTouchController(inputTarget, {
+    allowRotation,
+    rotateAnimation,
+    panAnimation
+  });
   touchController.on('pan', handleTouchPan);
   touchController.on('altPan', handleAltPan);
-  touchController.on('touchstart', handleTouchStart);
-  touchController.on('touchend', handleTouchEnd);
   touchController.on('zoomChange', zoomToClientCoordinates);
   touchController.on('angleChange', handleAngleChange);
 
@@ -67,8 +74,10 @@ export default function createSpaceMapCamera(scene, drawContext) {
     cameraPosition = view.position;
     r = Math.hypot(cameraPosition[2]);
     centerPointPosition = [cameraPosition[0], cameraPosition[1], 0]
-    theta = 0;
-    phi = -Math.PI/2;
+
+    theta = clamp(0, minTheta, maxTheta);
+    phi = clamp(-Math.PI/2, minPhi, maxPhi);
+    redraw()
   }
 
   function dispose() {
@@ -76,6 +85,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     inputTarget.removeEventListener('keyup', handleKeyUp);
     inputTarget.removeEventListener('wheel', handleWheel, {passive: false});
     inputTarget.removeEventListener('mousedown', handleMouseDown, {passive: false});
+    inputTarget.removeEventListener('dblclick', handleDoubleClick, {passive: false});
 
     // TODO: Should I be more precise here?
     document.removeEventListener('mousemove', onMouseMove);
@@ -149,20 +159,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
     redraw();
   }
 
-  function handleTouchStart(touches) {
-    panAnimation.cancel();
-    if (touches.length === 1) {
-      // only when one touch is active we want to have inertia
-      panAnimation.start();
-    }
-  }
-
-  function handleTouchEnd(activeTouches) {
-    if (activeTouches.length < 2) {
-      panAnimation.stop();
-    }
-  }
-
   function handleTouchPan(dx, dy) {
     panByAbsoluteOffset(dx, dy);
     redraw();
@@ -209,11 +205,48 @@ export default function createSpaceMapCamera(scene, drawContext) {
     }
   }
 
-  function zoomToClientCoordinates(clientX, clientY, scaleFactor) {
-    let p = getZoomPlaneIntersection(clientX, clientY)
-    zoomCenterByScaleFactor(scaleFactor, p[0] - centerPointPosition[0], p[1] - centerPointPosition[1]);
+  function handleDoubleClick(e) {
+    zoomToClientCoordinates(e.clientX, e.clientY, 0.5, true);
+    e.preventDefault();
+    e.stopPropagation();
+  }
 
-    redraw();
+  function zoomToClientCoordinates(clientX, clientY, scaleFactor, shouldAnimate) {
+    let p = getZoomPlaneIntersection(clientX, clientY)
+    let dx = p[0] - centerPointPosition[0]; 
+    let dy = p[1] - centerPointPosition[1];
+
+    if (shouldAnimate) {
+      let from = {r, x: centerPointPosition[0], y: centerPointPosition[1]};
+      let to = {
+        r: r * (1 - scaleFactor),
+        x: from.x + dx * scaleFactor,
+        y: from.y + dy * scaleFactor
+      };
+      animate(from, to, {
+        step(values) {
+          r = values.r;
+          centerPointPosition[0] = values.x;
+          centerPointPosition[1] = values.y;
+          redraw();
+        }
+      })
+    } else {
+      zoomCenterByScaleFactor(scaleFactor, dx, dy);
+      redraw();
+    }
+
+    function loop() {
+      var t = easing(frame/durationInFrames)
+      frame += 1
+
+      setValues(t)
+      if (frame <= durationInFrames) {
+        previousAnimationId = requestAnimationFrame(loop);
+      } else {
+        previousAnimationId = 0
+      }
+    }
   }
 
   function handleWheel(e) {
@@ -449,6 +482,7 @@ function isModifierKey(e) {
   return e.altKey || e.ctrlKey || e.metaKey;
 }
 
-function _(v) {
-  return v.map(x => Math.round(x * 1000) / 1000).join(', ')
+function option(value, fallback) {
+  if (value === undefined) return fallback;
+  return value;
 }

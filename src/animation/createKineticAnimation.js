@@ -29,6 +29,7 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
     setAmplitude,
     getAmplitude,
     stop,
+    impulse,
     cancel
   };
 
@@ -84,6 +85,10 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
   }
 
   function stop() {
+    impulse(vx, vy, vz);
+  }
+
+  function impulse(vx, vy, vz) {
     cancelAnimationFrame(ticker);
     cancelAnimationFrame(raf);
 
@@ -92,7 +97,6 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
     if (vx < -minVelocity || vx > minVelocity) {
       ax = amplitude * vx;
     }
-
     if (vy < -minVelocity || vy > minVelocity) {
       ay = amplitude * vy;
     }

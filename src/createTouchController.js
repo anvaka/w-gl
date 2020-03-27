@@ -23,18 +23,21 @@ const UNKNOWN = 0; // here we don't know yet. Collect more input to make a decis
 const ZOOM = 1;    // Locked to zooming.
 const ROTATE = 2;  // Locked to rotation.
 
-export default function createTouchController(inputTarget, allowRotation) {
+export default function createTouchController(inputTarget, inputState) {
   let api = eventify({dispose});
 
   let listening = false;
   let activeTouches = new Map();
-  let twoTouchMode = UNKNOWN;
+  let {allowRotation, panAnimation} = inputState;
 
   // for two fingers mode detection we are using moving averages of total scaling
-  // and total rotation. As soon as either of them exceeds a threshold, we lock the 
-  // `twoTouchMode` to either scaling or rotation.
+  // and total rotation. 
   let totalScale = 0;
   let totalRotation = 0;
+
+  // To handle double taps:
+  let doubleTapWaitHandler = 0;
+  let doubleTapWait = false;
 
   listenToEvents();
 
@@ -55,7 +58,11 @@ export default function createTouchController(inputTarget, allowRotation) {
       listening = true;
     }
 
-    api.fire('touchstart', e.touches);
+    panAnimation.cancel();
+    if (e.touches.length === 1) {
+      // only when one touch is active we want to have inertia
+      panAnimation.start();
+    }
 
     for (let i = 0; i < e.touches.length; ++i) {
       let touch = e.touches[i];
@@ -114,24 +121,21 @@ export default function createTouchController(inputTarget, allowRotation) {
       let zoomChange = Math.hypot(dx, dy) / Math.hypot(lastDx, lastDy) - 1;
       let angle = Math.atan2(dy, dx) - Math.atan2(lastDy, lastDx); 
 
-      totalScale = totalScale * 0.2 + 0.8 * Math.abs(zoomChange);
+      totalScale = totalScale * 0.5 + 0.5 * Math.abs(zoomChange);
       totalRotation = totalRotation * 0.2 + 0.8 * Math.abs(angle);
 
-      if (twoTouchMode === UNKNOWN) {
-        if (!allowRotation || totalScale > 0.01) twoTouchMode = ZOOM;
-        else if (totalRotation > 0.0025) twoTouchMode = ROTATE;
-      }
-
-      if (twoTouchMode === ZOOM) api.fire('zoomChange', cx, cy, zoomChange);
-      if (twoTouchMode === ROTATE) api.fire('angleChange', angle)
+      if (!allowRotation || totalScale > 0.01) api.fire('zoomChange', cx, cy, zoomChange);;
+      if (allowRotation && totalRotation > 0.0025) api.fire('angleChange', angle);
 
       e.preventDefault();
       e.stopPropagation();
     }
 
-    if (dx !== 0 || dy !== 0) {
-      // we are panning around
-      api.fire('pan', dx, dy);
+    if (dx !== 0 || dy !== 0 ) {
+      if (!(third && allowRotation)) {
+        // we are panning around
+        api.fire('pan', dx, dy);
+      }
     }
   }
 
@@ -142,13 +146,25 @@ export default function createTouchController(inputTarget, allowRotation) {
       activeTouches.delete(touch.identifier);
     }
 
+    clearTimeout(doubleTapWaitHandler);
+
     if (activeTouches.size === 0) {
       listening = false;
       stopDocumentTouchListeners();
-      api.fire('touchend', e.touches);
-    }
-    if (activeTouches.size < 2) {
-      twoTouchMode = UNKNOWN;
+
+      panAnimation.stop();
+
+      if (doubleTapWait) {
+        // we were waiting for the second tap, and this is it!
+        doubleTapWait = false;
+        let lastTouch = e.changedTouches[0];
+        api.fire('zoomChange', lastTouch.clientX, lastTouch.clientY, 0.5, true);
+      } else {
+        doubleTapWait = true;
+        doubleTapWaitHandler = setTimeout(() => {
+          doubleTapWait = false;
+        }, 350);
+      }
     }
   }
 
