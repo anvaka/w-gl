@@ -38,6 +38,7 @@ export default function createTouchController(inputTarget, inputState) {
   // To handle double taps:
   let doubleTapWaitHandler = 0;
   let doubleTapWait = false;
+  let lastTouch; 
 
   listenToEvents();
 
@@ -59,6 +60,7 @@ export default function createTouchController(inputTarget, inputState) {
     }
 
     panAnimation.cancel();
+
     if (e.touches.length === 1) {
       // only when one touch is active we want to have inertia
       panAnimation.start();
@@ -148,7 +150,7 @@ export default function createTouchController(inputTarget, inputState) {
 
     clearTimeout(doubleTapWaitHandler);
 
-    if (activeTouches.size === 0) {
+    if (activeTouches.size === 0 && e.changedTouches.length === 1) {
       listening = false;
       stopDocumentTouchListeners();
 
@@ -157,10 +159,18 @@ export default function createTouchController(inputTarget, inputState) {
       if (doubleTapWait) {
         // we were waiting for the second tap, and this is it!
         doubleTapWait = false;
-        let lastTouch = e.changedTouches[0];
-        api.fire('zoomChange', lastTouch.clientX, lastTouch.clientY, 0.5, true);
+        let newLastTouch = e.changedTouches[0];
+        let dx = Math.abs(newLastTouch.clientX - lastTouch.clientX);
+        let dy = Math.abs(newLastTouch.clientY - lastTouch.clientY);
+        lastTouch = newLastTouch;
+
+        if (dx + dy < 4.2) {
+          // make sure they tapped close enough
+          api.fire('zoomChange', lastTouch.clientX, lastTouch.clientY, 0.5, true);
+        }
       } else {
         doubleTapWait = true;
+        lastTouch = e.changedTouches[0];
         doubleTapWaitHandler = setTimeout(() => {
           doubleTapWait = false;
         }, 350);
