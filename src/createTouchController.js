@@ -57,7 +57,8 @@ class MultiTouchState {
   }
 
   track(first, second) {
-    this.rotationStateChanged = false;
+    this.stateChanged = false;
+
     if (this.state !== UNKNOWN) return; // Already resolved the state.
 
     if (!(this.first && this.second)) {
@@ -98,6 +99,7 @@ class MultiTouchState {
     let initialAngle = Math.atan2(dfy, dfx);
     let angleChange = Math.abs(initialAngle - Math.atan2(dcy, dcx));
 
+
     // Now let's see if this is incline change:
     initialAngle = Math.abs(initialAngle) * 180 / Math.PI;
     // Two fingers have to be roughly on the horizontal line
@@ -137,7 +139,7 @@ class MultiTouchState {
       this.state = SCALE;
     }
 
-    this.rotationStateChanged = this.canRotate || this.canIncline;
+    this.stateChanged = true;
   }
 }
 
@@ -238,8 +240,9 @@ export default function createTouchController(inputTarget, inputState) {
 
       multiTouchState.track(first, second);
 
-      if (multiTouchState.rotationStateChanged) {
+      if (multiTouchState.stateChanged) {
         rotateAnimation.start();
+        panAnimation.cancel();
       }
 
       if (multiTouchState.canScale) api.fire('zoomChange', cx, cy, zoomChange);
@@ -278,6 +281,7 @@ export default function createTouchController(inputTarget, inputState) {
     if (e.touches.length < 2) {
       multiTouchState.reset(); // prepare for more multi-touch gesture detection
       rotateAnimation.stop();  // spin if necessary.
+      panAnimation.stop();
     } 
 
     if (e.touches.length === 0) {
