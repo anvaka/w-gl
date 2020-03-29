@@ -27,6 +27,7 @@ class TouchState {
 const UNKNOWN = 0; // here we don't know yet. Collect more input to make a decision
 const SCALE = 1;   // Locked to scaling.
 const ROTATE = 2;  // Locked to rotation.
+const INCLINE = 3; // Locked to inclination.
 
 /**
  * This state is used to detect gestures. It answers the questions:
@@ -40,7 +41,7 @@ class MultiTouchState {
     this.state = UNKNOWN;
     this.canRotate = false;
     this.canScale = false;
-    this.canLift = false; // bro?
+    this.canIncline = false;
     this.first = undefined;
     this.second = undefined;
   }
@@ -49,11 +50,9 @@ class MultiTouchState {
     this.state = UNKNOWN;
     this.canRotate = false;
     this.canScale = false;
-    this.canLift = false;
+    this.canIncline = false;
     this.first = undefined;
     this.second = undefined;
-
-    document.querySelector('.x').innerText = '';
   }
 
   track(first, second) {
@@ -100,25 +99,39 @@ class MultiTouchState {
     // Now let's see if this is incline change:
     initialAngle = Math.abs(initialAngle) * 180 / Math.PI;
     // Two fingers have to be roughly on the horizontal line
-    let horizontalAngleInDegrees = 21;
+    let horizontalAngleInDegrees = 60;
     let isHorizontalLine = initialAngle < horizontalAngleInDegrees || 
           (180 - initialAngle) < horizontalAngleInDegrees;
 
-    if (isHorizontalLine) {
-      // TODO: track center movement
+    if (isHorizontalLine && this.allowRotation) {
+      // we take a sum of two vectors:
+      // direction of the first finger + direction of the second finger
+      // In case of incline change we want them to move either up or down
+      // which means X change should be small, why Y change should be large
+      let vx = first.x - originalFirst.x + second.x - originalSecond.x;
+      let vy = first.y - originalFirst.y + second.y - originalSecond.y;
+      if (Math.abs(vx) < 10 && Math.abs(vy) > 42) {
+        this.canIncline = true;
+      }
     }
 
-
-    if (angleChange > 0.1 && this.allowRotation) {
+    if (this.canIncline) {
+      this.canRotate = false;
+      this.canScale = false;
+      this.canIncline = true;
+      this.state = INCLINE;
+    } else if (angleChange > 0.1 && this.allowRotation) {
       // When we are rotating we want to be able to scale too:
       this.canRotate = true;
       this.canScale = true;
+      this.canIncline = false;
       this.state = ROTATE;
     } else if (scaleChange > 15) {
       // But when we are scaling, only scaling should be allowed
       // (otherwise it's too annoying):
       this.canRotate = false;
       this.canScale = true;
+      this.canIncline = false;
       this.state = SCALE;
     }
   }
@@ -178,7 +191,7 @@ export default function createTouchController(inputTarget, inputState) {
 
     let dx = 0; let dy = 0; // total difference between touches.
     let cx = 0; let cy = 0; // center of the touches
-    let first, second, third; // fingers.
+    let first, second; // fingers.
 
     let touches = e.touches;
     for (let i = 0; i < touches.length; ++i) {
@@ -197,7 +210,6 @@ export default function createTouchController(inputTarget, inputState) {
 
       if (!first) first = state;
       else if (!second) second = state;
-      else if (!third) third = state;
     }
     let changedCount = touches.length;
     dx /= changedCount; dy /= changedCount; 
@@ -206,9 +218,7 @@ export default function createTouchController(inputTarget, inputState) {
     if (!second) multiTouchState.reset();
 
     // todo: find something better than `first` and `second` tracking?
-    if (first && second && third && allowRotation) {
-      api.fire('altPan', dx, dy);
-    } else if (first && second) {
+    if (first && second) {
       let dx = second.x - first.x;
       let dy = second.y - first.y;
 
@@ -222,16 +232,22 @@ export default function createTouchController(inputTarget, inputState) {
 
       if (multiTouchState.canScale) api.fire('zoomChange', cx, cy, zoomChange);
       if (multiTouchState.canRotate) api.fire('angleChange', angle);
+      if (multiTouchState.canIncline) {
+        let inclineDirection = (second.y - second.lastY + first.y - first.lastY);
+        api.fire('altPan', 0, Math.sign(inclineDirection) * 2);
+      }
 
       e.preventDefault();
       e.stopPropagation();
     }
 
-    if (dx !== 0 || dy !== 0 ) {
-      if (!(third && allowRotation)) {
-        // we are panning around
-        api.fire('pan', dx, dy);
-      }
+    let shouldSkipPanning = multiTouchState.canIncline || (
+      e.touches.length > 1 && multiTouchState.state === UNKNOWN
+    );
+
+    if ((dx !== 0 || dy !== 0) && !shouldSkipPanning) {
+      // we are panning around
+      api.fire('pan', dx, dy);
     }
   }
 
@@ -244,6 +260,11 @@ export default function createTouchController(inputTarget, inputState) {
     if (e.touches.length < 2) multiTouchState.reset();
 
     clearTimeout(doubleTapWaitHandler);
+
+    if (e.touches.length === 0) {
+      // Just in case we missed a finger in the map - clean it here.
+      activeTouches.clear();
+    }
 
     if (activeTouches.size === 0 && e.changedTouches.length === 1) {
       listening = false;
@@ -259,7 +280,7 @@ export default function createTouchController(inputTarget, inputState) {
         let dy = Math.abs(newLastTouch.clientY - lastTouch.clientY);
         lastTouch = newLastTouch;
 
-        if (dx + dy < 4.2) {
+        if (Math.hypot(dx, dy) < 30) {
           // make sure they tapped close enough
           api.fire('zoomChange', lastTouch.clientX, lastTouch.clientY, 0.5, true);
         }
