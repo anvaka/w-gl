@@ -1,11 +1,15 @@
-import eventify from "ngraph.events";
+import eventify from 'ngraph.events';
 
+/**
+ * Just to track changes for a single touch event, we create this state:
+ */
 class TouchState {
   constructor(touch) {
     this.x = touch.clientX;
     this.y = touch.clientY;
     this.lastX = this.x;
     this.lastY = this.y;
+    this.id = touch.identifier;
   }
 
   move(touch) {
@@ -18,10 +22,107 @@ class TouchState {
 }
 
 // When two fingers touch the scene we want to "lock" interaction to either rotation
-// or scaling. These constants represent "locked" state.
+// or scaling. When locked to rotation, we also allow scaling. When Locked to scaling
+// only scaling is allowed
 const UNKNOWN = 0; // here we don't know yet. Collect more input to make a decision
-const ZOOM = 1;    // Locked to zooming.
+const SCALE = 1;   // Locked to scaling.
 const ROTATE = 2;  // Locked to rotation.
+
+/**
+ * This state is used to detect gestures. It answers the questions:
+ * - Should we scale with this gesture?
+ * - Should we rotate with this gesture?
+ * - Should we change incline with this gesture?
+ */
+class MultiTouchState {
+  constructor(allowRotation) {
+    this.allowRotation = allowRotation;
+    this.state = UNKNOWN;
+    this.canRotate = false;
+    this.canScale = false;
+    this.canLift = false; // bro?
+    this.first = undefined;
+    this.second = undefined;
+  }
+
+  reset() {
+    this.state = UNKNOWN;
+    this.canRotate = false;
+    this.canScale = false;
+    this.canLift = false;
+    this.first = undefined;
+    this.second = undefined;
+
+    document.querySelector('.x').innerText = '';
+  }
+
+  track(first, second) {
+    if (this.state !== UNKNOWN) return; // Already resolved the state.
+
+    if (!(this.first && this.second)) {
+      this.first = {
+        id: first.id,
+        x: first.x,
+        y: first.y
+      };
+      this.second = {
+        id: second.id,
+        x: second.x,
+        y: second.y
+      };
+      // we are not ready yet to process anything. Wait for more data:
+      return;
+    }
+
+    // Make sure we have the same first/second touches:
+    let originalFirst = this.first;
+    let originalSecond = this.second;
+    if (first.id === originalSecond.id && second.id === originalFirst.id) {
+      let t = originalFirst;
+      originalFirst = originalSecond;
+      originalSecond = t;
+    }
+
+    // Now let's figure out what gesture we are dealing with...
+    let dfy = originalFirst.y - originalSecond.y;
+    let dfx = originalFirst.x - originalSecond.x;
+
+    let dcy = first.y - second.y;
+    let dcx = first.x - second.x;
+
+    // We compare how much the distance has changed between first two touches and
+    // current two touches:
+    let scaleChange = Math.abs(Math.hypot(dfy, dfx) - Math.hypot(dcy, dcx));
+    // Also compare how much the angle has changed:
+    let initialAngle = Math.atan2(dfy, dfx);
+    let angleChange = Math.abs(initialAngle - Math.atan2(dcy, dcx));
+
+    // Now let's see if this is incline change:
+    initialAngle = Math.abs(initialAngle) * 180 / Math.PI;
+    // Two fingers have to be roughly on the horizontal line
+    let horizontalAngleInDegrees = 21;
+    let isHorizontalLine = initialAngle < horizontalAngleInDegrees || 
+          (180 - initialAngle) < horizontalAngleInDegrees;
+
+    if (isHorizontalLine) {
+      // TODO: track center movement
+    }
+
+
+    if (angleChange > 0.1 && this.allowRotation) {
+      // When we are rotating we want to be able to scale too:
+      this.canRotate = true;
+      this.canScale = true;
+      this.state = ROTATE;
+    } else if (scaleChange > 15) {
+      // But when we are scaling, only scaling should be allowed
+      // (otherwise it's too annoying):
+      this.canRotate = false;
+      this.canScale = true;
+      this.state = SCALE;
+    }
+  }
+}
 
 export default function createTouchController(inputTarget, inputState) {
   let api = eventify({dispose});
@@ -29,15 +130,13 @@ export default function createTouchController(inputTarget, inputState) {
   let listening = false;
   let activeTouches = new Map();
   let {allowRotation, panAnimation} = inputState;
+  let multiTouchState = new MultiTouchState(allowRotation);
 
-  // for two fingers mode detection we are using moving averages of total scaling
-  // and total rotation. 
-  let totalScale = 0;
-  let totalRotation = 0;
-
-  // To handle double taps:
-  let doubleTapWaitHandler = 0;
+  // To handle double taps
   let doubleTapWait = false;
+  let doubleTapWaitHandler = 0;
+  // used for double tap distance check: if they tapped to far, it is not a 
+  // double tap:
   let lastTouch; 
 
   listenToEvents();
@@ -71,11 +170,6 @@ export default function createTouchController(inputTarget, inputState) {
       activeTouches.set(touch.identifier, new TouchState(touch));
     }
 
-    if (e.touches.length === 2) {
-      totalScale = 0;
-      totalRotation = 0;
-    }
-
     e.stopPropagation();
     e.preventDefault();
   }
@@ -105,12 +199,13 @@ export default function createTouchController(inputTarget, inputState) {
       else if (!second) second = state;
       else if (!third) third = state;
     }
-
     let changedCount = touches.length;
     dx /= changedCount; dy /= changedCount; 
     cx /= changedCount; cy /= changedCount;
 
-    // todo: find something better than `first` and `second` tracking
+    if (!second) multiTouchState.reset();
+
+    // todo: find something better than `first` and `second` tracking?
     if (first && second && third && allowRotation) {
       api.fire('altPan', dx, dy);
     } else if (first && second) {
@@ -123,11 +218,10 @@ export default function createTouchController(inputTarget, inputState) {
       let zoomChange = Math.hypot(dx, dy) / Math.hypot(lastDx, lastDy) - 1;
       let angle = Math.atan2(dy, dx) - Math.atan2(lastDy, lastDx); 
 
-      totalScale = totalScale * 0.5 + 0.5 * Math.abs(zoomChange);
-      totalRotation = totalRotation * 0.2 + 0.8 * Math.abs(angle);
+      multiTouchState.track(first, second);
 
-      if (!allowRotation || totalScale > 0.01) api.fire('zoomChange', cx, cy, zoomChange);;
-      if (allowRotation && totalRotation > 0.0025) api.fire('angleChange', angle);
+      if (multiTouchState.canScale) api.fire('zoomChange', cx, cy, zoomChange);
+      if (multiTouchState.canRotate) api.fire('angleChange', angle);
 
       e.preventDefault();
       e.stopPropagation();
@@ -147,6 +241,7 @@ export default function createTouchController(inputTarget, inputState) {
       let touch = touches[i];
       activeTouches.delete(touch.identifier);
     }
+    if (e.touches.length < 2) multiTouchState.reset();
 
     clearTimeout(doubleTapWaitHandler);
 
@@ -189,4 +284,8 @@ export default function createTouchController(inputTarget, inputState) {
     document.removeEventListener('touchend', handleTouchEnd, {passive: false});
     document.removeEventListener('touchcancel ', handleTouchEnd, {passive: false});
   }
+}
+
+function round(x, f) {
+  return Math.round(x * f) / f;
 }
