@@ -10,6 +10,7 @@ class TouchState {
     this.lastX = this.x;
     this.lastY = this.y;
     this.id = touch.identifier;
+    this.createdAt = Date.now();
   }
 
   move(touch) {
@@ -56,6 +57,7 @@ class MultiTouchState {
   }
 
   track(first, second) {
+    this.rotationStateChanged = false;
     if (this.state !== UNKNOWN) return; // Already resolved the state.
 
     if (!(this.first && this.second)) {
@@ -102,8 +104,8 @@ class MultiTouchState {
     let horizontalAngleInDegrees = 60;
     let isHorizontalLine = initialAngle < horizontalAngleInDegrees || 
           (180 - initialAngle) < horizontalAngleInDegrees;
-
-    if (isHorizontalLine && this.allowRotation) {
+    if (isHorizontalLine && this.allowRotation && 
+      Math.abs(first.createdAt - second.createdAt) < 100) {
       // we take a sum of two vectors:
       // direction of the first finger + direction of the second finger
       // In case of incline change we want them to move either up or down
@@ -134,6 +136,8 @@ class MultiTouchState {
       this.canIncline = false;
       this.state = SCALE;
     }
+
+    this.rotationStateChanged = this.canRotate || this.canIncline;
   }
 }
 
@@ -142,15 +146,13 @@ export default function createTouchController(inputTarget, inputState) {
 
   let listening = false;
   let activeTouches = new Map();
-  let {allowRotation, panAnimation} = inputState;
+  let {allowRotation, panAnimation, rotateAnimation} = inputState;
   let multiTouchState = new MultiTouchState(allowRotation);
 
-  // To handle double taps
-  let doubleTapWait = false;
-  let doubleTapWaitHandler = 0;
-  // used for double tap distance check: if they tapped to far, it is not a 
-  // double tap:
+  // used for double tap distance check: if they tapped to far, it is not a double tap:
   let lastTouch; 
+  let lastTouchEndEventTime = Date.now();
+  let lastMultiTouchEventTime = lastTouchEndEventTime;
 
   listenToEvents();
 
@@ -172,6 +174,7 @@ export default function createTouchController(inputTarget, inputState) {
     }
 
     panAnimation.cancel();
+    rotateAnimation.cancel();
 
     if (e.touches.length === 1) {
       // only when one touch is active we want to have inertia
@@ -180,7 +183,9 @@ export default function createTouchController(inputTarget, inputState) {
 
     for (let i = 0; i < e.touches.length; ++i) {
       let touch = e.touches[i];
-      activeTouches.set(touch.identifier, new TouchState(touch));
+      if (!activeTouches.has(touch.identifier)) {
+        activeTouches.set(touch.identifier, new TouchState(touch));
+      }
     }
 
     e.stopPropagation();
@@ -188,6 +193,7 @@ export default function createTouchController(inputTarget, inputState) {
   }
 
   function handleTouchMove(e) {
+    let now = Date.now();
 
     let dx = 0; let dy = 0; // total difference between touches.
     let cx = 0; let cy = 0; // center of the touches
@@ -219,6 +225,8 @@ export default function createTouchController(inputTarget, inputState) {
 
     // todo: find something better than `first` and `second` tracking?
     if (first && second) {
+      lastMultiTouchEventTime = now;
+
       let dx = second.x - first.x;
       let dy = second.y - first.y;
 
@@ -230,20 +238,25 @@ export default function createTouchController(inputTarget, inputState) {
 
       multiTouchState.track(first, second);
 
+      if (multiTouchState.rotationStateChanged) {
+        rotateAnimation.start();
+      }
+
       if (multiTouchState.canScale) api.fire('zoomChange', cx, cy, zoomChange);
       if (multiTouchState.canRotate) api.fire('angleChange', angle);
       if (multiTouchState.canIncline) {
-        let inclineDirection = (second.y - second.lastY + first.y - first.lastY);
-        api.fire('altPan', 0, Math.sign(inclineDirection) * 2);
+        let totalMove = (second.y - second.lastY + first.y - first.lastY);
+        api.fire('altPan', 0, totalMove);
       }
 
       e.preventDefault();
       e.stopPropagation();
     }
 
-    let shouldSkipPanning = multiTouchState.canIncline || (
-      e.touches.length > 1 && multiTouchState.state === UNKNOWN
-    );
+    let timeSinceLastTouchEnd = now - lastTouchEndEventTime;
+    let shouldSkipPanning = multiTouchState.canIncline ||  // can't pan when incline is changed
+      (timeSinceLastTouchEnd < 300) || // don't pan if they just released a finger.
+      (e.touches.length > 1 && multiTouchState.state === UNKNOWN);
 
     if ((dx !== 0 || dy !== 0) && !shouldSkipPanning) {
       // we are panning around
@@ -252,14 +265,20 @@ export default function createTouchController(inputTarget, inputState) {
   }
 
   function handleTouchEnd(e) {
+    let now = Date.now();
+    let timeSinceLastTouchEnd = now - lastTouchEndEventTime;
+    lastTouchEndEventTime = now;
+
     let touches = e.changedTouches;
     for (let i = 0; i < touches.length; ++i) {
       let touch = touches[i];
       activeTouches.delete(touch.identifier);
     }
-    if (e.touches.length < 2) multiTouchState.reset();
 
-    clearTimeout(doubleTapWaitHandler);
+    if (e.touches.length < 2) {
+      multiTouchState.reset(); // prepare for more multi-touch gesture detection
+      rotateAnimation.stop();  // spin if necessary.
+    } 
 
     if (e.touches.length === 0) {
       // Just in case we missed a finger in the map - clean it here.
@@ -272,25 +291,19 @@ export default function createTouchController(inputTarget, inputState) {
 
       panAnimation.stop();
 
-      if (doubleTapWait) {
-        // we were waiting for the second tap, and this is it!
-        doubleTapWait = false;
+      if (timeSinceLastTouchEnd < 350 && (now - lastMultiTouchEventTime) > 350) {
+        // Double tap?
         let newLastTouch = e.changedTouches[0];
         let dx = Math.abs(newLastTouch.clientX - lastTouch.clientX);
         let dy = Math.abs(newLastTouch.clientY - lastTouch.clientY);
-        lastTouch = newLastTouch;
 
         if (Math.hypot(dx, dy) < 30) {
-          // make sure they tapped close enough
+          // Yes! They tapped close enough to the last tap. Zoom in:
           api.fire('zoomChange', lastTouch.clientX, lastTouch.clientY, 0.5, true);
         }
-      } else {
-        doubleTapWait = true;
-        lastTouch = e.changedTouches[0];
-        doubleTapWaitHandler = setTimeout(() => {
-          doubleTapWait = false;
-        }, 350);
       }
+
+      lastTouch = e.changedTouches[0];
     }
   }
 

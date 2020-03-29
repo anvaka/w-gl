@@ -17,12 +17,12 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
   let timestamp;
   let timeConstant = 342;
 
-  let ticker;
+  let trackValueHandle;
   let vx, ax;
   let vy, ay;
   let vz, az;
 
-  let raf;
+  let animationHandle;
 
   return {
     start,
@@ -42,8 +42,8 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
   }
 
   function cancel() {
-    cancelAnimationFrame(ticker);
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(trackValueHandle);
+    cancelAnimationFrame(animationHandle);
   }
 
   function start() {
@@ -52,13 +52,13 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
     ax = ay = vx = vy = vz = 0;
     timestamp = new Date();
 
-    cancelAnimationFrame(ticker);
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(trackValueHandle);
+    cancelAnimationFrame(animationHandle);
 
     // we start polling the point position to accumulate velocity
     // Once we stop(), we will use accumulated velocity to keep scrolling
     // an object.
-    ticker = requestAnimationFrame(track);
+    trackValueHandle = requestAnimationFrame(track);
   }
 
   function track() {
@@ -81,17 +81,22 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
     vy = 0.8 * dy * dt + 0.2 * vy;
     vz = 0.8 * dz * dt + 0.2 * vz;
 
-    ticker = requestAnimationFrame(track);
+    trackValueHandle = requestAnimationFrame(track);
   }
 
   function stop() {
+    if (!trackValueHandle) return;
+
+    cancelAnimationFrame(trackValueHandle);
+    trackValueHandle = 0;
+
+    cancelAnimationFrame(animationHandle);
+    animationHandle = 0;
+
     impulse(vx, vy, vz);
   }
 
   function impulse(vx, vy, vz) {
-    cancelAnimationFrame(ticker);
-    cancelAnimationFrame(raf);
-
     timestamp = Date.now();
 
     if (vx < -minVelocity || vx > minVelocity) {
@@ -104,7 +109,7 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
       az = amplitude * vz;
     }
 
-    raf = requestAnimationFrame(kineticMove);
+    animationHandle = requestAnimationFrame(kineticMove);
   }
 
   function kineticMove() {
@@ -140,7 +145,7 @@ export default function createKineticAnimation(getCurrentPoint, moveCallback, se
     if (moving) {
       let p = getCurrentPoint();
       moveCallback(p.x + dx, p.y + dy, p.z + dz);
-      raf = requestAnimationFrame(kineticMove);
+      animationHandle = requestAnimationFrame(kineticMove);
     }
   }
 }

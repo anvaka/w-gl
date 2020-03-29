@@ -3,7 +3,6 @@ import eventify from 'ngraph.events';
 import Element from './Element';
 import onClap from './clap';
 import {mat4, vec4, quat, vec3} from 'gl-matrix';
-import createMapCamera from './createMapCamera';
 import ViewMatrix from './ViewMatrix';
 import createSpaceMapCamera from './createSpaceMapCamera';
 
