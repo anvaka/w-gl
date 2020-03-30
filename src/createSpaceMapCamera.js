@@ -1,8 +1,8 @@
 import { vec3, mat4 } from 'gl-matrix';
 import animate from 'amator';
 import createKineticAnimation from './animation/createKineticAnimation';
-import createTouchController from './createTouchController';
-import createKeyboardController from './createKeyboardController';
+import createTouchController from './input/createTouchController';
+import createKeyboardController from './input/createKeyboardController';
 
 export default function createSpaceMapCamera(scene, drawContext) {
   let view = drawContext.view;

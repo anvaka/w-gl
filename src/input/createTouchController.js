@@ -1,4 +1,4 @@
-import { TouchState, MultiTouchState } from './input/TouchState';
+import { TouchState, MultiTouchState } from './TouchState';
 
 export default function createTouchController(inputTarget, camera) {
   let listening = false;
