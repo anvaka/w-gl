@@ -39,7 +39,6 @@ export default function createKeyboardController(inputTarget, camera) {
 
     dPhi = clampTo((dPhi * dampFactor + vPhi/2), Math.PI/360, 0);
     dIncline = clampTo((dIncline * dampFactor + vIncline/6), Math.PI/360, 0);
-
     if (dPhi || dIncline) {
       camera.rotateByAbsoluteOffset(dPhi, dIncline);
       needRedraw = true;
