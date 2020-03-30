@@ -28,7 +28,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let theta = clamp(0, minTheta, maxTheta);
 
   let mouseX, mouseY, isAltMouseMove;
-  let centerPointPosition = drawContext.center; // [0, 0, 0];
+  let centerPointPosition = drawContext.center;
 
   let cameraPosition = view.position;
   let panAnimation = createKineticAnimation(
@@ -46,9 +46,14 @@ export default function createSpaceMapCamera(scene, drawContext) {
     dispose,
     setViewBox,
     panByAbsoluteOffset,
+    rotateByAngle,
     rotateByAbsoluteOffset,
     zoomCenterByScaleFactor,
-    redraw
+    zoomToClientCoordinates,
+    redraw,
+    allowRotation,
+    rotateAnimation,
+    panAnimation
   };
 
   let inputTarget = drawContext.canvas;
@@ -62,18 +67,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
   });
 
   let keyboardController = createKeyboardController(inputTarget, api);
-
-  let touchController = createTouchController(inputTarget, {
-    allowRotation,
-    rotateAnimation,
-    panAnimation
-  });
-
-  // TODO: These should be just part of our own API.
-  touchController.on('pan', handleTouchPan);
-  touchController.on('altPan', handleAltPan);
-  touchController.on('zoomChange', zoomToClientCoordinates);
-  touchController.on('angleChange', handleAngleChange);
+  let touchController = createTouchController(inputTarget, api);
 
   redraw();
 
@@ -91,12 +85,8 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
   function dispose() {
     inputTarget.removeEventListener('wheel', handleWheel, { passive: false });
-    inputTarget.removeEventListener('mousedown', handleMouseDown, {
-      passive: false
-    });
-    inputTarget.removeEventListener('dblclick', handleDoubleClick, {
-      passive: false
-    });
+    inputTarget.removeEventListener('mousedown', handleMouseDown, { passive: false });
+    inputTarget.removeEventListener('dblclick', handleDoubleClick, { passive: false });
 
     // TODO: Should I be more precise here?
     document.removeEventListener('mousemove', onMouseMove);
@@ -166,19 +156,9 @@ export default function createSpaceMapCamera(scene, drawContext) {
     redraw();
   }
 
-  function handleAngleChange(angleChange) {
+  function rotateByAngle(angleChange, thetaChange) {
     phi = clamp(phi + angleChange, minPhi, maxPhi);
-    redraw();
-  }
-
-  function handleTouchPan(dx, dy) {
-    panByAbsoluteOffset(dx, dy);
-    redraw();
-  }
-
-  function handleAltPan(dx, dy) {
-    rotateByAbsoluteOffset(dx, dy);
-    redraw();
+    theta = clamp(theta + thetaChange, minTheta, maxTheta);
   }
 
   function rotateByAbsoluteOffset(dx, dy) {

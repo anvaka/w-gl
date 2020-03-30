@@ -1,12 +1,9 @@
-import eventify from "ngraph.events";
-import {TouchState, MultiTouchState} from './input/TouchState';
+import { TouchState, MultiTouchState } from './input/TouchState';
 
-export default function createTouchController(inputTarget, inputState) {
-  let api = eventify({ dispose });
-
+export default function createTouchController(inputTarget, camera) {
   let listening = false;
   let activeTouches = new Map();
-  let { allowRotation, panAnimation, rotateAnimation } = inputState;
+  let { allowRotation, panAnimation, rotateAnimation } = camera;
   let multiTouchState = new MultiTouchState(allowRotation);
 
   // used for double tap distance check: if they tapped to far, it is not a double tap:
@@ -16,19 +13,15 @@ export default function createTouchController(inputTarget, inputState) {
 
   listenToEvents();
 
-  return api;
+  return {dispose};
 
   function dispose() {
-    inputTarget.removeEventListener("touchstart", handleTouchStart, {
-      passive: false
-    });
+    inputTarget.removeEventListener('touchstart', handleTouchStart, { passive: false });
     stopDocumentTouchListeners();
   }
 
   function listenToEvents() {
-    inputTarget.addEventListener("touchstart", handleTouchStart, {
-      passive: false
-    });
+    inputTarget.addEventListener('touchstart', handleTouchStart, { passive: false });
   }
 
   function handleTouchStart(e) {
@@ -64,6 +57,7 @@ export default function createTouchController(inputTarget, inputState) {
     let cx = 0;
     let cy = 0; // center of the touches
     let first, second; // fingers.
+    let needRedraw = false;
 
     let touches = e.touches;
     for (let i = 0; i < touches.length; ++i) {
@@ -112,11 +106,18 @@ export default function createTouchController(inputTarget, inputState) {
         panAnimation.cancel();
       }
 
-      if (multiTouchState.canScale) api.fire("zoomChange", cx, cy, zoomChange);
-      if (multiTouchState.canRotate) api.fire("angleChange", angle);
+      if (multiTouchState.canScale) {
+        camera.zoomToClientCoordinates(cx, cy, zoomChange);
+        needRedraw = true;
+      }
+      if (multiTouchState.canRotate) {
+        camera.rotateByAngle(angle, 0);
+        needRedraw = true;
+      } 
       if (multiTouchState.canIncline) {
         let totalMove = second.y - second.lastY + first.y - first.lastY;
-        api.fire("altPan", 0, totalMove);
+        camera.rotateByAbsoluteOffset(0, totalMove);
+        needRedraw = true;
       }
 
       e.preventDefault();
@@ -131,7 +132,12 @@ export default function createTouchController(inputTarget, inputState) {
 
     if ((dx !== 0 || dy !== 0) && !shouldSkipPanning) {
       // we are panning around
-      api.fire("pan", dx, dy);
+      camera.panByAbsoluteOffset(dx, dy);
+      needRedraw = true;
+    }
+
+    if (needRedraw) {
+      camera.redraw();
     }
   }
 
@@ -171,13 +177,7 @@ export default function createTouchController(inputTarget, inputState) {
 
         if (Math.hypot(dx, dy) < 30) {
           // Yes! They tapped close enough to the last tap. Zoom in:
-          api.fire(
-            "zoomChange",
-            lastTouch.clientX,
-            lastTouch.clientY,
-            0.5,
-            true
-          );
+          camera.zoomToClientCoordinates(lastTouch.clientX, lastTouch.clientY, 0.5, true);
         }
       }
 
@@ -186,22 +186,14 @@ export default function createTouchController(inputTarget, inputState) {
   }
 
   function startDocumentTouchListeners() {
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-    document.addEventListener("touchend", handleTouchEnd, { passive: false });
-    document.addEventListener("touchcancel ", handleTouchEnd, {
-      passive: false
-    });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    document.addEventListener('touchcancel ', handleTouchEnd, { passive: false });
   }
 
   function stopDocumentTouchListeners() {
-    document.removeEventListener("touchmove", handleTouchMove, {
-      passive: false
-    });
-    document.removeEventListener("touchend", handleTouchEnd, {
-      passive: false
-    });
-    document.removeEventListener("touchcancel ", handleTouchEnd, {
-      passive: false
-    });
+    document.removeEventListener('touchmove', handleTouchMove, { passive: false });
+    document.removeEventListener('touchend', handleTouchEnd, { passive: false });
+    document.removeEventListener('touchcancel ', handleTouchEnd, { passive: false });
   }
 }
