@@ -1,4 +1,4 @@
-import eventify from 'ngraph.events';
+import eventify from "ngraph.events";
 
 /**
  * Just to track changes for a single touch event, we create this state:
@@ -26,8 +26,8 @@ class TouchState {
 // or scaling. When locked to rotation, we also allow scaling. When Locked to scaling
 // only scaling is allowed
 const UNKNOWN = 0; // here we don't know yet. Collect more input to make a decision
-const SCALE = 1;   // Locked to scaling.
-const ROTATE = 2;  // Locked to rotation.
+const SCALE = 1; // Locked to scaling.
+const ROTATE = 2; // Locked to rotation.
 const INCLINE = 3; // Locked to inclination.
 
 /**
@@ -99,15 +99,18 @@ class MultiTouchState {
     let initialAngle = Math.atan2(dfy, dfx);
     let angleChange = Math.abs(initialAngle - Math.atan2(dcy, dcx));
 
-
     // Now let's see if this is incline change:
-    initialAngle = Math.abs(initialAngle) * 180 / Math.PI;
+    initialAngle = (Math.abs(initialAngle) * 180) / Math.PI;
     // Two fingers have to be roughly on the horizontal line
     let horizontalAngleInDegrees = 60;
-    let isHorizontalLine = initialAngle < horizontalAngleInDegrees || 
-          (180 - initialAngle) < horizontalAngleInDegrees;
-    if (isHorizontalLine && this.allowRotation && 
-      Math.abs(first.createdAt - second.createdAt) < 100) {
+    let isHorizontalLine =
+      initialAngle < horizontalAngleInDegrees ||
+      180 - initialAngle < horizontalAngleInDegrees;
+    if (
+      isHorizontalLine &&
+      this.allowRotation &&
+      Math.abs(first.createdAt - second.createdAt) < 100
+    ) {
       // we take a sum of two vectors:
       // direction of the first finger + direction of the second finger
       // In case of incline change we want them to move either up or down
@@ -144,15 +147,15 @@ class MultiTouchState {
 }
 
 export default function createTouchController(inputTarget, inputState) {
-  let api = eventify({dispose});
+  let api = eventify({ dispose });
 
   let listening = false;
   let activeTouches = new Map();
-  let {allowRotation, panAnimation, rotateAnimation} = inputState;
+  let { allowRotation, panAnimation, rotateAnimation } = inputState;
   let multiTouchState = new MultiTouchState(allowRotation);
 
   // used for double tap distance check: if they tapped to far, it is not a double tap:
-  let lastTouch; 
+  let lastTouch;
   let lastTouchEndEventTime = Date.now();
   let lastMultiTouchEventTime = lastTouchEndEventTime;
 
@@ -161,14 +164,18 @@ export default function createTouchController(inputTarget, inputState) {
   return api;
 
   function dispose() {
-    inputTarget.removeEventListener('touchstart', handleTouchStart, {passive: false});
+    inputTarget.removeEventListener("touchstart", handleTouchStart, {
+      passive: false
+    });
     stopDocumentTouchListeners();
   }
 
   function listenToEvents() {
-    inputTarget.addEventListener('touchstart', handleTouchStart, {passive: false});
+    inputTarget.addEventListener("touchstart", handleTouchStart, {
+      passive: false
+    });
   }
-  
+
   function handleTouchStart(e) {
     if (!listening) {
       startDocumentTouchListeners();
@@ -197,8 +204,10 @@ export default function createTouchController(inputTarget, inputState) {
   function handleTouchMove(e) {
     let now = Date.now();
 
-    let dx = 0; let dy = 0; // total difference between touches.
-    let cx = 0; let cy = 0; // center of the touches
+    let dx = 0;
+    let dy = 0; // total difference between touches.
+    let cx = 0;
+    let cy = 0; // center of the touches
     let first, second; // fingers.
 
     let touches = e.touches;
@@ -212,7 +221,8 @@ export default function createTouchController(inputTarget, inputState) {
 
       state.move(touch);
 
-      cx += state.x; cy += state.y;
+      cx += state.x;
+      cy += state.y;
       dx += state.x - state.lastX;
       dy += state.y - state.lastY;
 
@@ -220,8 +230,10 @@ export default function createTouchController(inputTarget, inputState) {
       else if (!second) second = state;
     }
     let changedCount = touches.length;
-    dx /= changedCount; dy /= changedCount; 
-    cx /= changedCount; cy /= changedCount;
+    dx /= changedCount;
+    dy /= changedCount;
+    cx /= changedCount;
+    cy /= changedCount;
 
     if (!second) multiTouchState.reset();
 
@@ -236,7 +248,7 @@ export default function createTouchController(inputTarget, inputState) {
       let lastDy = second.lastY - first.lastY;
 
       let zoomChange = Math.hypot(dx, dy) / Math.hypot(lastDx, lastDy) - 1;
-      let angle = Math.atan2(dy, dx) - Math.atan2(lastDy, lastDx); 
+      let angle = Math.atan2(dy, dx) - Math.atan2(lastDy, lastDx);
 
       multiTouchState.track(first, second);
 
@@ -245,11 +257,11 @@ export default function createTouchController(inputTarget, inputState) {
         panAnimation.cancel();
       }
 
-      if (multiTouchState.canScale) api.fire('zoomChange', cx, cy, zoomChange);
-      if (multiTouchState.canRotate) api.fire('angleChange', angle);
+      if (multiTouchState.canScale) api.fire("zoomChange", cx, cy, zoomChange);
+      if (multiTouchState.canRotate) api.fire("angleChange", angle);
       if (multiTouchState.canIncline) {
-        let totalMove = (second.y - second.lastY + first.y - first.lastY);
-        api.fire('altPan', 0, totalMove);
+        let totalMove = second.y - second.lastY + first.y - first.lastY;
+        api.fire("altPan", 0, totalMove);
       }
 
       e.preventDefault();
@@ -257,13 +269,14 @@ export default function createTouchController(inputTarget, inputState) {
     }
 
     let timeSinceLastTouchEnd = now - lastTouchEndEventTime;
-    let shouldSkipPanning = multiTouchState.canIncline ||  // can't pan when incline is changed
-      (timeSinceLastTouchEnd < 300) || // don't pan if they just released a finger.
+    let shouldSkipPanning =
+      multiTouchState.canIncline || // can't pan when incline is changed
+      timeSinceLastTouchEnd < 300 || // don't pan if they just released a finger.
       (e.touches.length > 1 && multiTouchState.state === UNKNOWN);
 
     if ((dx !== 0 || dy !== 0) && !shouldSkipPanning) {
       // we are panning around
-      api.fire('pan', dx, dy);
+      api.fire("pan", dx, dy);
     }
   }
 
@@ -280,9 +293,9 @@ export default function createTouchController(inputTarget, inputState) {
 
     if (e.touches.length < 2) {
       multiTouchState.reset(); // prepare for more multi-touch gesture detection
-      rotateAnimation.stop();  // spin if necessary.
+      rotateAnimation.stop(); // spin if necessary.
       panAnimation.stop();
-    } 
+    }
 
     if (e.touches.length === 0) {
       // Just in case we missed a finger in the map - clean it here.
@@ -295,7 +308,7 @@ export default function createTouchController(inputTarget, inputState) {
 
       panAnimation.stop();
 
-      if (timeSinceLastTouchEnd < 350 && (now - lastMultiTouchEventTime) > 350) {
+      if (timeSinceLastTouchEnd < 350 && now - lastMultiTouchEventTime > 350) {
         // Double tap?
         let newLastTouch = e.changedTouches[0];
         let dx = Math.abs(newLastTouch.clientX - lastTouch.clientX);
@@ -303,7 +316,13 @@ export default function createTouchController(inputTarget, inputState) {
 
         if (Math.hypot(dx, dy) < 30) {
           // Yes! They tapped close enough to the last tap. Zoom in:
-          api.fire('zoomChange', lastTouch.clientX, lastTouch.clientY, 0.5, true);
+          api.fire(
+            "zoomChange",
+            lastTouch.clientX,
+            lastTouch.clientY,
+            0.5,
+            true
+          );
         }
       }
 
@@ -312,18 +331,22 @@ export default function createTouchController(inputTarget, inputState) {
   }
 
   function startDocumentTouchListeners() {
-    document.addEventListener('touchmove', handleTouchMove, {passive: false});
-    document.addEventListener('touchend', handleTouchEnd, {passive: false});
-    document.addEventListener('touchcancel ', handleTouchEnd, {passive: false});
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd, { passive: false });
+    document.addEventListener("touchcancel ", handleTouchEnd, {
+      passive: false
+    });
   }
 
   function stopDocumentTouchListeners() {
-    document.removeEventListener('touchmove', handleTouchMove, {passive: false});
-    document.removeEventListener('touchend', handleTouchEnd, {passive: false});
-    document.removeEventListener('touchcancel ', handleTouchEnd, {passive: false});
+    document.removeEventListener("touchmove", handleTouchMove, {
+      passive: false
+    });
+    document.removeEventListener("touchend", handleTouchEnd, {
+      passive: false
+    });
+    document.removeEventListener("touchcancel ", handleTouchEnd, {
+      passive: false
+    });
   }
-}
-
-function round(x, f) {
-  return Math.round(x * f) / f;
 }
