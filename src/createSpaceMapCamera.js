@@ -3,6 +3,7 @@ import animate from 'amator';
 import createKineticAnimation from './animation/createKineticAnimation';
 import createTouchController from './input/createTouchController';
 import createKeyboardController from './input/createKeyboardController';
+import createMouseController from './input/createMouseController'
 
 export default function createSpaceMapCamera(scene, drawContext) {
   let view = drawContext.view;
@@ -27,7 +28,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let maxTheta = option(sceneOptions.maxTheta, Math.PI);
   let theta = clamp(0, minTheta, maxTheta);
 
-  let mouseX, mouseY, isAltMouseMove;
   let centerPointPosition = drawContext.center;
 
   let cameraPosition = view.position;
@@ -58,16 +58,9 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
   let inputTarget = drawContext.canvas;
 
-  inputTarget.addEventListener('wheel', handleWheel, { passive: false });
-  inputTarget.addEventListener('mousedown', handleMouseDown, {
-    passive: false
-  });
-  inputTarget.addEventListener('dblclick', handleDoubleClick, {
-    passive: false
-  });
-
   let keyboardController = createKeyboardController(inputTarget, api);
   let touchController = createTouchController(inputTarget, api);
+  let mouseController = createMouseController(inputTarget, api);
 
   redraw();
 
@@ -84,39 +77,11 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 
   function dispose() {
-    inputTarget.removeEventListener('wheel', handleWheel, { passive: false });
-    inputTarget.removeEventListener('mousedown', handleMouseDown, { passive: false });
-    inputTarget.removeEventListener('dblclick', handleDoubleClick, { passive: false });
-
-    // TODO: Should I be more precise here?
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
     rotateAnimation.cancel();
     panAnimation.cancel();
     touchController.dispose();
     keyboardController.dispose();
-  }
-
-  function handleMouseDown(e) {
-    let isLeftButton =
-      (e.button === 1 && window.event !== null) || e.button === 0;
-    if (!isLeftButton) return;
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-    isAltMouseMove = e.altKey && allowRotation;
-
-    panAnimation.cancel();
-    rotateAnimation.cancel();
-
-    if (isAltMouseMove) {
-      rotateAnimation.start();
-    } else {
-      panAnimation.start();
-    }
+    mouseController.dispose();
   }
 
   function getZoomPlaneIntersection(clientX, clientY) {
@@ -138,22 +103,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
       let isect = vec3.scaleAndAdd([], cameraPosition, ray, t);
       return isect;
     }
-  }
-
-  function onMouseMove(e) {
-    let dy = e.clientY - mouseY;
-    let dx = e.clientX - mouseX;
-
-    if (isAltMouseMove) {
-      rotateByAbsoluteOffset(dx, dy);
-    } else {
-      panByAbsoluteOffset(dx, dy);
-    }
-
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-
-    redraw();
   }
 
   function rotateByAngle(angleChange, thetaChange) {
@@ -188,22 +137,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
     moveCenterBy(x, -y); // WebGL Y is not the same as typical DOM Y.
   }
 
-  function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    if (isAltMouseMove) {
-      rotateAnimation.stop();
-    } else {
-      panAnimation.stop();
-    }
-  }
-
-  function handleDoubleClick(e) {
-    zoomToClientCoordinates(e.clientX, e.clientY, 0.5, true);
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
   function zoomToClientCoordinates(
     clientX,
     clientY,
@@ -233,13 +166,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
       zoomCenterByScaleFactor(scaleFactor, dx, dy);
       redraw();
     }
-  }
-
-  function handleWheel(e) {
-    let scaleFactor = getScaleFactorFromDelta(-e.deltaY);
-    zoomToClientCoordinates(e.clientX, e.clientY, scaleFactor);
-
-    e.preventDefault();
   }
 
   function moveCenterBy(dx, dy) {
@@ -274,10 +200,6 @@ export default function createSpaceMapCamera(scene, drawContext) {
   function setCenterPosition(x, y, z) {
     vec3.set(centerPointPosition, x, y, z);
     redraw();
-  }
-
-  function getScaleFactorFromDelta(delta) {
-    return Math.sign(delta) * Math.min(0.25, Math.abs(delta / 128));
   }
 
   function zoomCenterByScaleFactor(scaleFactor, dx, dy) {
