@@ -1,6 +1,5 @@
 ## todo
 
-* Remove shader graph
 * Polygons
 * Strip line with custom width
 * Per segment line width 
@@ -15,8 +14,4 @@
 * ~~Game camera~~
 * ~~Point cloud refactor (optimize colors)~~
 * ~~Better game camera (mix of map/game camera)~~
-
-
-## Ideas
-* Game camera should be a mix of map camera and game camera. E.g. panzoom should work in that mode too.
-* Use inertia/friction for the camera - makes it feel more natural?
+* ~~Remove shader graph~~

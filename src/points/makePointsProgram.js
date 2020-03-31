@@ -1,7 +1,6 @@
 export default makePointsProgram;
 
 import gl_utils from '../glUtils';
-import shaderGraph from '../shaderGraph/index.js';
 import createMultiKeyCache from '../lines/createMultiKeyCache';
 
 let vertexProgramCache = createMultiKeyCache();
@@ -164,11 +163,7 @@ function getShadersCode(allowColors) {
   }
   `;
 
-  const vertexShaderCode = shaderGraph.getVSCode([
-    {
-      globals() {
-        return `
-  attribute float aPointSize;
+  const vertexShaderCode = `attribute float aPointSize;
   attribute vec3 aPosition;
   varying vec4 vColor;
   ${allowColors ? 'attribute vec4 aColor;' : ''}
@@ -177,24 +172,19 @@ function getShadersCode(allowColors) {
   uniform mat4 uModel;
   uniform mat4 uView;
   uniform vec3 uOrigin;
-`;
-      },
-      mainBody() {
-        return `
 
-  mat4 modelView = uView * uModel;
-  vec4 mvPosition = modelView * vec4( aPosition, 1.0 );
+  void main() {
+    mat4 modelView = uView * uModel;
+    vec4 mvPosition = modelView * vec4( aPosition, 1.0 );
 
-  vec4 glPos = projectionMatrix * mvPosition;
-  gl_Position = glPos;
-  vec4 glOrigin = modelView * vec4(uOrigin, 1.0);
-  float cameraDist = length( glPos.xyz - glOrigin.xyz );
-  gl_PointSize = max(aPointSize * 128./cameraDist, 2.);
-  vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
+    vec4 glPos = projectionMatrix * mvPosition;
+    gl_Position = glPos;
+    vec4 glOrigin = modelView * vec4(uOrigin, 1.0);
+    float cameraDist = length( glPos.xyz - glOrigin.xyz );
+    gl_PointSize = max(aPointSize * 128./cameraDist, 2.);
+    vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
+  }
 `;
-      }
-    }
-  ]);
 
   return {
     fragmentShaderCode, vertexShaderCode

@@ -1,5 +1,4 @@
 import utils from '../glUtils';
-import shaderGraph from '../shaderGraph/index.js';
 import createMultiKeyCache from './createMultiKeyCache';
 
 let lineProgramCache = createMultiKeyCache();
@@ -106,26 +105,16 @@ void main() {
   gl_FragColor = vColor;
 }
 `;
-  const lineVSSrc = shaderGraph.getVSCode([
-    {
-      globals() {
-        return `
-  attribute vec3 aPosition;
+  const lineVSSrc = `attribute vec3 aPosition;
   varying vec4 vColor;
   ${allowColors ? 'attribute vec4 aColor;' : ''}
   uniform vec4 uColor;
   uniform mat4 projectionMatrix;
   uniform mat4 uModel;
   uniform mat4 uView;
-`;
-      },
-      mainBody() {
-        return `
-  gl_Position = projectionMatrix * uView * uModel * vec4(aPosition, 1.0);
-  vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
-`;
-      }
-    }
-  ]);
+  void main() {
+    gl_Position = projectionMatrix * uView * uModel * vec4(aPosition, 1.0);
+    vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
+  }`;
   return { lineVSSrc, lineFSSrc };
 }
