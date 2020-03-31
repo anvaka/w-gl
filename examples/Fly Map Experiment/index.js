@@ -13,16 +13,14 @@ window.up = upCollection.add({
   from: {x: 0, y: 0, z: 0, color: 0xff0000ff},
   to: {x: 0, y: 1, z: 0, color: 0xff00ffff},
 })
-let scene = createScene(document.querySelector('canvas'), {
-  allowRotation: false
-});
+let scene = createScene(document.querySelector('canvas'), {});
 // drawGraph(scene);
 
 
 drawGrid(scene)
 // scene.appendChild(upCollection)
-// let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
-// scene.appendChild(someShape1);
+let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
+scene.appendChild(someShape1);
 //let someShape = createCameraImage();
 
 // and lets bring it into the view:
