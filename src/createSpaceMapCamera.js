@@ -29,19 +29,13 @@ export default function createSpaceMapCamera(scene, drawContext) {
   let theta = clamp(0, minTheta, maxTheta);
 
   let centerPointPosition = drawContext.center;
-
   let cameraPosition = view.position;
-  let panAnimation = createKineticAnimation(
-    getCenterPosition,
-    setCenterPosition
-  );
 
-  let rotateAnimation = createKineticAnimation(
-    getCenterRotation,
-    setCenterRotation, {
-      minVelocity: 1
-    }
-  );
+  let panAnimation = createKineticAnimation(getCenterPosition, setCenterPosition);
+  let rotateAnimation = createKineticAnimation(getCenterRotation, setCenterRotation, {
+    minVelocity: 1
+  });
+
   const api = {
     dispose,
     setViewBox,
@@ -58,9 +52,9 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
   let inputTarget = drawContext.canvas;
 
-  let keyboardController = createKeyboardController(inputTarget, api);
-  let touchController = createTouchController(inputTarget, api);
-  let mouseController = createMouseController(inputTarget, api);
+  const keyboardController = createKeyboardController(inputTarget, api);
+  const touchController = createTouchController(inputTarget, api);
+  const mouseController = createMouseController(inputTarget, api);
 
   redraw();
 
@@ -137,12 +131,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     moveCenterBy(x, -y); // WebGL Y is not the same as typical DOM Y.
   }
 
-  function zoomToClientCoordinates(
-    clientX,
-    clientY,
-    scaleFactor,
-    shouldAnimate
-  ) {
+  function zoomToClientCoordinates(clientX, clientY, scaleFactor, shouldAnimate) {
     let p = getZoomPlaneIntersection(clientX, clientY);
     let dx = p[0] - centerPointPosition[0];
     let dy = p[1] - centerPointPosition[1];
@@ -187,7 +176,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     return {
       x: phi,
       y: theta,
-      z: r
+      z: 0, // Should be r, but not used.
     };
   }
 

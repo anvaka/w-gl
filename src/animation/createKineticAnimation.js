@@ -1,26 +1,17 @@
 /**
  * Allows smooth kinetic scrolling of the surface
  */
-export default function createKineticAnimation(
-  getCurrentPoint,
-  moveCallback,
-  settings
-) {
-  if (typeof settings !== "object") {
-    settings = {};
-  }
+export default function createKineticAnimation(getCurrentPoint, moveCallback, settings) {
+  if (typeof settings !== 'object') settings = {};
+ 
   let EPS = 1e-3;
 
-  let minVelocity =
-    typeof settings.minVelocity === "number" ? settings.minVelocity : EPS;
-  let amplitude =
-    typeof settings.amplitude === "number" ? settings.amplitude : 0.01;
-  let cancelAnimationFrame =
-    typeof settings.cancelAnimationFrame === "function"
+  let minVelocity = typeof settings.minVelocity === 'number' ? settings.minVelocity : EPS;
+  let amplitude = typeof settings.amplitude === 'number' ? settings.amplitude : 0.01;
+  let cancelAnimationFrame = typeof settings.cancelAnimationFrame === 'function'
       ? settings.cancelAnimationFrame
       : getCancelAnimationFrame();
-  let requestAnimationFrame =
-    typeof settings.requestAnimationFrame === "function"
+  let requestAnimationFrame = typeof settings.requestAnimationFrame === 'function'
       ? settings.requestAnimationFrame
       : getRequestAnimationFrame();
 
@@ -162,13 +153,13 @@ export default function createKineticAnimation(
 }
 
 function getCancelAnimationFrame() {
-  if (typeof cancelAnimationFrame === "function") return cancelAnimationFrame;
+  if (typeof cancelAnimationFrame === 'function') return cancelAnimationFrame;
 
   return clearTimeout;
 }
 
 function getRequestAnimationFrame() {
-  if (typeof requestAnimationFrame === "function") return requestAnimationFrame;
+  if (typeof requestAnimationFrame === 'function') return requestAnimationFrame;
 
   return function(handler) {
     return setTimeout(handler, 16);

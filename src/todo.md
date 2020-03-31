@@ -1,6 +1,5 @@
 ## todo
 
-* Better game camera (mix of map/game camera)
 * Remove shader graph
 * Polygons
 * Strip line with custom width
@@ -15,6 +14,7 @@
 * ~~Thick lines~~
 * ~~Game camera~~
 * ~~Point cloud refactor (optimize colors)~~
+* ~~Better game camera (mix of map/game camera)~~
 
 
 ## Ideas
