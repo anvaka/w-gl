@@ -8,10 +8,10 @@ let count = 42;
 let circle = new LineStripCollection(count + 1);
 let points = new PointCollection(count + 1);
 
-let r = 1;
+let r = 10000;
 for (let i = 0; i <= count; ++i) {
   let angle = 2 * Math.PI * i / count;
-  circle.add(r * Math.cos(angle), r * Math.sin(angle))
+  circle.add(r * Math.cos(angle), r * Math.sin(angle), 0, 0xffffffff)
   points.add({
     x: (r + 1) * Math.cos(angle),
     y: (r + 1) * Math.sin(angle),

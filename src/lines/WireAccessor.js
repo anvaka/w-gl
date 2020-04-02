@@ -3,7 +3,7 @@
  * 
  * Wires are "lines" with 1.0 width.
  */
-class WireAccessor {
+export default class WireAccessor {
   constructor(wireCollection, offset) {
     this.offset = offset;
     this._wire = wireCollection;
@@ -41,14 +41,26 @@ class WireAccessor {
     var hasColor = this._wire.allowColors;
     if (hasColor) {
       if (from.color !== undefined) this._wire.colors[offset] = from.color;
+      //else this._wire.colors[offset] = toHex(this._wire.color)
+      else this._wire.colors[offset] = toHex(this._wire.color)
       offset += 1;
     }
 
     positions[offset + 0] = to.x
     positions[offset + 1] = to.y
     positions[offset + 2] = to.z || 0
-    if (hasColor && to.color) this._wire.colors[offset + 3] = to.color;
+    if (hasColor) {
+      if (to.color) this._wire.colors[offset + 3] = to.color;
+      else this._wire.colors[offset + 3] = toHex(this._wire.color)
+    }
   }
 }
 
-export default WireAccessor;
+function toHex(color) {
+  let r = Math.round(color.r * 255);
+  let g = Math.round(color.g * 255);
+  let b = Math.round(color.b * 255);
+  let a = Math.round(color.a * 255);
+
+  return (r << 24) | (g << 16) | (b << 8) | a;
+}

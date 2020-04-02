@@ -12,8 +12,8 @@ class WireCollection extends Element {
   constructor(capacity, options) {
     super();
     let bytesPerElement = 4; // float32 or uint32 - both require 4 bytes
-    this.is3D = options && options.is3D;
-    this.allowColors = options && options.allowColors;
+    this.allowColors = !options || options.allowColors === undefined || options.allowColors;
+    this.is3D = !options || options.is3D === undefined || options.is3D;
     this.itemsPerLine = 4; // (startX, startY) (endX, endY);
     if (this.is3D) this.itemsPerLine += 2; // Add two more for Z;
     if (this.allowColors) this.itemsPerLine += 2; // Add two more for color

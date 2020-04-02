@@ -5,6 +5,7 @@
 * Per segment line width 
 * line joins
 * Hit test
+* larger points
 * Text.
 * Tree-shake friendly
 * Unit tests.

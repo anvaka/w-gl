@@ -10,8 +10,8 @@ export default class PointCollection extends Element {
       throw new Error('Point capacity should be defined');
     }
     super();
-    this.is3D = options && options.is3D;
-    this.allowColors = options && options.allowColors;
+    this.is3D = !options || options.is3D === undefined || options.is3D;
+    this.allowColors = !options || options.allowColors === undefined || options.allowColors;
     
     this.itemsPerPoint = 3; // (x, y, size)
     if (this.is3D) this.itemsPerPoint += 1;

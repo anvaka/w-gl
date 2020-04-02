@@ -14,8 +14,8 @@ export default class LineStripCollection extends Element {
     this.drawCount = 0;
     this.madeFullCircle = false;
 
-    this.allowColors = options && options.allowColors;
-    this.is3D = options && options.is3D;
+    this.allowColors = !options || options.allowColors === undefined || options.allowColors;
+    this.is3D = !options || options.is3D === undefined || options.is3D;
 
     this.itemsPerLine = 2;
     if (this.allowColors) this.itemsPerLine += 1;
@@ -34,6 +34,7 @@ export default class LineStripCollection extends Element {
       // We are sharing the buffer!
       this.colors = new Uint32Array(this.buffer);
     }
+    this.add = this.is3D ? this.add3 : this.add;
   }
 
   draw(gl, drawContext) {
@@ -43,7 +44,7 @@ export default class LineStripCollection extends Element {
     this._program.draw(this, drawContext);
   }
 
-  add(x, y, color) {
+  add2(x, y, color) {
     var offset = this.nextElementIndex * this.itemsPerLine;
     let positions = this.positions;
     positions[offset] = x;
@@ -74,7 +75,7 @@ export default class LineStripCollection extends Element {
     positions[offset + 2] = z;
 
     if (this.allowColors) {
-      this.colors[offset + 3] = color === undefined ? 0 : color;
+      this.colors[offset + 3] = color === undefined ? 0xffffffff : color;
     }
     this.nextElementIndex += 1;
     this.drawCount += 1;

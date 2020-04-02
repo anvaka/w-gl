@@ -4,11 +4,7 @@
 const {createScene, WireCollection, createGameCamera, createSpaceMapCamera, PointCollection} = window.wgl;
 const {mat4, quat, vec3} = glMatrix;
 
-let upCollection = new WireCollection(10, {
-  is3D: true,
-  width: 4,
-  allowColors: true
-});
+let upCollection = new WireCollection(10, { width: 4 });
 window.up = upCollection.add({
   from: {x: 0, y: 0, z: 0, color: 0xff0000ff},
   to: {x: 0, y: 1, z: 0, color: 0xff00ffff},

@@ -46,7 +46,6 @@ export default function makeWireProgram(gl, wireCollection) {
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, wireCollection.worldModel);
     gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
-    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.view.position);
 
     var color = wireCollection.color;
     gl.uniform4f(locations.uniforms.uColor, color.r, color.g, color.b, color.a);

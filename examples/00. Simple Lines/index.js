@@ -3,7 +3,7 @@ const {createScene, WireCollection} = window.wgl;
 let scene = createScene(document.querySelector('canvas'));
 
 // let's draw a grid:
-let lines = new WireCollection(22,{width:4});
+let lines = new WireCollection(22,{ width:4 });
 for (let row = 0; row <= 100; ++row) {
   lines.add({
     from: {x: 0, y: row},
