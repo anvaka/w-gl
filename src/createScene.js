@@ -3,8 +3,12 @@ import eventify from 'ngraph.events';
 import Element from './Element';
 import onClap from './clap';
 import {mat4, vec4, quat, vec3} from 'gl-matrix';
+import {setMatrixArrayType} from 'gl-matrix/esm/common';
 import ViewMatrix from './ViewMatrix';
 import createSpaceMapCamera from './createSpaceMapCamera';
+
+// Float32 is not enough for large scenes.
+setMatrixArrayType(Float64Array);
 
 export default function createScene(canvas, options) {
   var width;
