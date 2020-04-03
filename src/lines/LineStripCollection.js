@@ -34,7 +34,6 @@ export default class LineStripCollection extends Element {
       // We are sharing the buffer!
       this.colors = new Uint32Array(this.buffer);
     }
-    this.add = this.is3D ? this.add3 : this.add;
   }
 
   draw(gl, drawContext) {
@@ -44,49 +43,30 @@ export default class LineStripCollection extends Element {
     this._program.draw(this, drawContext);
   }
 
-  add2(x, y, color) {
-    var offset = this.nextElementIndex * this.itemsPerLine;
+  add(segment) {
+    let offset = this.nextElementIndex * this.itemsPerLine;
     let positions = this.positions;
-    positions[offset] = x;
-    positions[offset + 1] = y;
-
+    positions[offset] = segment.x; offset += 1;
+    positions[offset] = segment.y; offset += 1;
+    if (this.is3D) {
+      positions[offset] = segment.z || 0; offset += 1;
+    }
     if (this.allowColors) {
-      this.colors[offset + 2] = color === undefined ? 0 : color;
+      this.colors[offset] = segment.color === undefined ? 0xffffffff : segment.color;
     }
     this.nextElementIndex += 1;
     this.drawCount += 1;
 
     if (this.nextElementIndex > this.capacity) {
       this.nextElementIndex = 1;
-      positions[0] = x;
-      positions[0 + 1] = y;
-      if (this.allowColors) {
-        this.colors[2] = this.colors[offset + 2];
+      let firstOffset = 0;
+      positions[firstOffset] = segment.x; firstOffset += 1;
+      positions[firstOffset] = segment.y; firstOffset += 1;
+      if (this.is3D) {
+        positions[firstOffset] = segment.z || 0; firstOffset += 1;
       }
-      this.madeFullCircle = true;
-    }
-  }
-
-  add3(x, y, z, color) {
-    var offset = this.nextElementIndex * this.itemsPerLine;
-    let positions = this.positions;
-    positions[offset] = x;
-    positions[offset + 1] = y;
-    positions[offset + 2] = z;
-
-    if (this.allowColors) {
-      this.colors[offset + 3] = color === undefined ? 0xffffffff : color;
-    }
-    this.nextElementIndex += 1;
-    this.drawCount += 1;
-
-    if (this.nextElementIndex > this.capacity) {
-      this.nextElementIndex = 1;
-      positions[0] = x;
-      positions[0 + 1] = y;
-      positions[0 + 2] = z;
       if (this.allowColors) {
-        this.colors[3] = this.colors[offset + 3];
+        this.colors[firstOffset] = this.colors[offset];
       }
       this.madeFullCircle = true;
     }
