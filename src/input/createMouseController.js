@@ -77,8 +77,9 @@ export default function createMouseController(inputTarget, camera) {
   }
 
   function handleWheel(e) {
-    // TODO: Windows machine?
-    let scaleFactor = getScaleFactorFromDelta(-e.deltaY);
+    // in windows FF it scrolls differently. Want to have the same speed there:
+    let deltaFactor = e.deltaMode > 0 ? 100 : 1;
+    let scaleFactor = getScaleFactorFromDelta(-e.deltaY * deltaFactor);
     camera.zoomToClientCoordinates(e.clientX, e.clientY, scaleFactor);
 
     e.preventDefault();
