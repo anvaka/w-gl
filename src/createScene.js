@@ -27,6 +27,8 @@ export default function createScene(canvas, options) {
 
   var frameToken = 0;
   var sceneRoot = new Element();
+  var hasMouseClickListeners = false;
+  var hasMouseMoveListeners = false;
 
   var view = new ViewMatrix();
   var projection = mat4.create();
@@ -72,6 +74,9 @@ export default function createScene(canvas, options) {
     getDrawContext,
     getOptions
   });
+
+  let realOn = api.on;
+  api.on = trapOn;
 
   sceneRoot.bindScene(api);
   let cameraController = (options.camera || createSpaceMapCamera)(api, drawContext);
@@ -135,9 +140,7 @@ export default function createScene(canvas, options) {
 
   function listenToEvents() {
     canvas.addEventListener('mousemove', onMouseMove);
-
     disposeClick = onClap(canvas, onMouseClick, this);
-
     window.addEventListener('resize', onResize, true);
   }
 
@@ -184,6 +187,7 @@ export default function createScene(canvas, options) {
   }
 
   function onMouseClick(e) {
+    if (!hasMouseClickListeners) return;
     var p = getSceneCoordinate(e.clientX, e.clientY);
     if (!p) return; // need to zoom in!
 
@@ -195,6 +199,8 @@ export default function createScene(canvas, options) {
   }
 
   function onMouseMove(e) {
+    if (!hasMouseMoveListeners) return;
+
     var p = getSceneCoordinate(e.clientX, e.clientY);
     if (!p) return;
 
@@ -288,5 +294,12 @@ export default function createScene(canvas, options) {
 
   function removeChild(child) {
     sceneRoot.removeChild(child)
+  }
+
+  function trapOn(eventName, callback, context) {
+    if (eventName === 'click') hasMouseClickListeners = true;
+    if (eventName === 'mousemove') hasMouseMoveListeners = true;
+
+    return realOn(eventName, callback, context);
   }
 }
