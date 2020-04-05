@@ -11,6 +11,7 @@ export default class WireAccessor {
   }
 
   update2D(from, to) {
+    this._wire.isDirtyBuffer = true;
     var positions = this._wire.positions;
     var offset = this.offset;
 
@@ -31,6 +32,7 @@ export default class WireAccessor {
   }
 
   update3D(from, to) {
+    this._wire.isDirtyBuffer = true;
     var positions = this._wire.positions;
     var offset = this.offset;
 

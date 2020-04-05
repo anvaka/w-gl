@@ -50,9 +50,11 @@ export default function makeWireProgram(gl, wireCollection) {
     var color = wireCollection.color;
     gl.uniform4f(locations.uniforms.uColor, color.r, color.g, color.b, color.a);
 
-    // TODO: Avoid buffering, if data hasn't changed?
     gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    if (wireCollection.isDirtyBuffer) {
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      wireCollection.isDirtyBuffer = false;
+    }
 
     gl.enableVertexAttribArray(locations.attributes.aPosition)
     if (allowColors) {

@@ -55,7 +55,7 @@ class WireCollection extends Element {
 
     // we need to switch the program
     let parent = this.parent;
-    parent.removeChild()
+    parent.removeChild(this)
     this.dispose();
     parent.appendChild(this);
   }
