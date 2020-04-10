@@ -241,6 +241,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
     mat4.getRotation(view.rotation, view.matrix);
     view.update();
+    scene.fire('transform', drawContext);
     scene.renderFrame();
   }
 }
