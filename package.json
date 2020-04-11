@@ -1,6 +1,6 @@
 {
   "name": "w-gl",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "A simple WebGL renderer",
   "main": "build/wgl.js",
   "module": "index.js",
