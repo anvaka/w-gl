@@ -290,10 +290,12 @@ export default function createScene(canvas, options) {
 
   function appendChild(child, sendToBack) {
     sceneRoot.appendChild(child, sendToBack);
+    api.fire('append-child', child); // TODO: might need to add support for bubbling?
   }
 
   function removeChild(child) {
     sceneRoot.removeChild(child)
+    api.fire('remove-child', child);
   }
 
   function trapOn(eventName, callback, context) {
