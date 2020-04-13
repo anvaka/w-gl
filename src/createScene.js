@@ -193,8 +193,8 @@ export default function createScene(canvas, options) {
 
     api.fire('click', {
       originalEvent: e,
-      sceneX: p.x,
-      sceneY: p.y,
+      x: p.x,
+      y: p.y,
     })
   }
 
