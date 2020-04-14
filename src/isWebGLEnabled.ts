@@ -1,6 +1,4 @@
-export default isWebGLEnabled;
-
-function isWebGLEnabled(canvas) {
+export default function isWebGLEnabled(canvas: HTMLCanvasElement) {
   try {
     if (!window.WebGLRenderingContext) return false;
     if (!canvas) canvas = document.createElement('canvas');

@@ -4,6 +4,10 @@
  * Wires are "lines" with 1.0 width.
  */
 export default class WireAccessor {
+  offset: any;
+  _wire: any;
+  update: (from: any, to: any) => void;
+
   constructor(wireCollection, offset) {
     this.offset = offset;
     this._wire = wireCollection;

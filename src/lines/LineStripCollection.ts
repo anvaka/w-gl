@@ -7,6 +7,19 @@ import makeLineStripProgram from './makeLineStripProgram';
  * buffer is connected with a line to the previous element of the buffer.
  */
 export default class LineStripCollection extends Element {
+  drawCount: number;
+  madeFullCircle: boolean;
+  allowColors: boolean;
+  is3D: boolean;
+  itemsPerLine: number;
+  capacity: any;
+  nextElementIndex: number;
+  _program: any;
+  color: Color;
+  buffer: ArrayBuffer;
+  positions: Float32Array;
+  colors: Uint32Array;
+
   constructor(capacity, options) {
     super();
 

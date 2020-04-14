@@ -82,4 +82,4 @@ function wglPanZoom(scene, drawContext) {
   }
 
   return controller;
-  }
+}

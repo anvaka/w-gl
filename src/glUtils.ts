@@ -9,7 +9,7 @@ const glUtils = {
 
 export default glUtils;
 
-function compile(gl, type, shaderSrc) {
+function compile(gl: WebGLRenderingContext, type: GLenum, shaderSrc: string) {
   var shader = gl.createShader(type);
   gl.shaderSource(shader, shaderSrc);
   gl.compileShader(shader);
@@ -21,7 +21,7 @@ function compile(gl, type, shaderSrc) {
   return shader;
 }
 
-function link(gl, vertexShader, fragmentShader) {
+function link(gl: WebGLRenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader) {
   var program = gl.createProgram();
   gl.attachShader(program, vertexShader);
   gl.attachShader(program, fragmentShader);
@@ -35,14 +35,14 @@ function link(gl, vertexShader, fragmentShader) {
   return program;
 }
 
-function getLocations(gl, program) {
+function getLocations(gl: WebGLRenderingContext, program: WebGLProgram) {
   return {
     attributes: getAttributes(gl, program),
     uniforms: getUniforms(gl, program)
   }
 }
 
-function getAttributes(gl, program) {
+function getAttributes(gl: WebGLRenderingContext, program: WebGLProgram) {
   var attributes = Object.create(null);
 
   var numberOfAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
@@ -54,7 +54,7 @@ function getAttributes(gl, program) {
   return attributes;
 }
 
-function getUniforms(gl, program) {
+function getUniforms(gl: WebGLRenderingContext, program: WebGLProgram) {
   var uniforms = Object.create(null);
   var numberOfUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
   for (var i = 0; i < numberOfUniforms; ++i) {
@@ -65,7 +65,7 @@ function getUniforms(gl, program) {
   return uniforms;
 }
 
-function initBuffer(gl, data, elementsPerVertex, attribute) {
+function initBuffer(gl: WebGLRenderingContext, data: BufferSource | null, elementsPerVertex: number, attribute: number) {
   var buffer = gl.createBuffer();
   if (!buffer) throw new Error('Failed to create a buffer');
 

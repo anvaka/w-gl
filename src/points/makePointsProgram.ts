@@ -1,11 +1,10 @@
-export default makePointsProgram;
-
 import gl_utils from '../glUtils';
 import createMultiKeyCache from '../lines/createMultiKeyCache';
+import PointCollection from './PointCollection'
 
 let vertexProgramCache = createMultiKeyCache();
 
-function makePointsProgram(gl, pointCollection) {
+export default function makePointsProgram(gl: WebGLRenderingContext, pointCollection: PointCollection) {
   let allowColors = !!pointCollection.allowColors;
   let programKey = [allowColors, gl];
 

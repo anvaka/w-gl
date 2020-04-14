@@ -1,13 +1,31 @@
 import {mat4} from 'gl-matrix';
 /**
- * represents a single element in the scene tree
+ * Represents a single element in the scene tree
  */
-class Element {
+export default class Element {
+  children: Element[];
+
+  parent: Element;
+
+  /**
+   * Transforms local coordinate system to parent coordinate system
+   */
+  model: mat4;
+
+  /**
+   * Cumulative transform to webgl coordinate system.
+   */
+  worldModel: mat4;
+
+  worldTransformNeedsUpdate: boolean;
+
+  type: string;
+
+  scene: any;
+
   constructor() {
     this.children = [];
-    // Transforms local coordinate system to parent coordinate system
     this.model = mat4.create();
-    // Cumulative transform to webgl coordinate system.
     this.worldModel = mat4.create();
     this.worldTransformNeedsUpdate = true;
 
@@ -16,7 +34,7 @@ class Element {
     this.parent = null;
   }
 
-  appendChild(child, sendToBack) {
+  appendChild(child: Element, sendToBack = false) {
     child.parent = this;
     if (sendToBack) {
       // back of z-index
@@ -98,7 +116,7 @@ class Element {
     if (this.scene) this.scene.renderFrame();
   }
 
-  updateWorldTransform(force) {
+  updateWorldTransform(force = false) {
     if (this.worldTransformNeedsUpdate || force) {
       if (this.parent) {
         mat4.multiply(this.worldModel, this.parent.worldModel, this.model);
@@ -134,5 +152,3 @@ class Element {
     }
   }
 }
-
-export default Element;

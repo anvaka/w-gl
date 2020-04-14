@@ -3,9 +3,7 @@ var config = {
   singleTapDistanceSquared: 25 // within 5px we consider it as a single tap
 }
 
-export default onClap;
-
-function onClap(element, callback, ctx) {
+export default function onClap(element: Element, callback, ctx) {
   var touchStartTime = Date.now();
   var startPos
 

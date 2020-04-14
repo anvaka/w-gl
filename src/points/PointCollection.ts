@@ -5,11 +5,24 @@ import Color from '../Color';
 import PointAccessor from './PointAccessor';
 
 export default class PointCollection extends Element {
-  constructor(capacity, options) {
+  is3D: boolean;
+  allowColors: boolean;
+  capacity: number;
+  count: number;
+  color: Color;
+  buffer: ArrayBuffer;
+  positions: Float32Array;
+  colors: Uint32Array;
+  size?: number;
+  itemsPerPoint: number;
+  _program: any;
+
+  constructor(capacity: number, options) {
     if (capacity === undefined) {
       throw new Error('Point capacity should be defined');
     }
     super();
+
     this.is3D = !options || options.is3D === undefined || options.is3D;
     this.allowColors = !options || options.allowColors === undefined || options.allowColors;
     
@@ -28,7 +41,7 @@ export default class PointCollection extends Element {
     }
   }
 
-  draw(gl, drawContext) {
+  draw(gl: WebGLRenderingContext, drawContext) {
     if (!this._program) {
       this._program = makePointsProgram(gl, this);
     }

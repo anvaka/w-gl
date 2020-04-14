@@ -174,7 +174,7 @@ function getGlobalOrder(graph) {
   }
 }
 
-function getColor(el, from, to) {
+function getColor(el, from?, to?) {
   if (el.allowColors && from && from.color && to && to.color) {
     return mixUint32Color(from.color, to.color);
   }

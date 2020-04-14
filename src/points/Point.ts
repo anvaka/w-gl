@@ -1,7 +1,12 @@
 import Color from '../Color';
 
-class Point {
-  constructor(x, y, size) {
+export default class Point {
+  x: number;
+  y: number;
+  color?: Color;
+  size?: number;
+
+  constructor(x: number, y: number, size?: number) {
     if (Number.isNaN(x)) throw new Error('x is not a number');
     if (Number.isNaN(y)) throw new Error('y is not a number');
 
@@ -12,5 +17,3 @@ class Point {
     this.size = Number.isFinite(size) ? size : 4;
   }
 }
-
-export default Point;

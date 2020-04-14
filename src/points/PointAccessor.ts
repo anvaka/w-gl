@@ -1,5 +1,11 @@
-class PointAccessor {
-  constructor(points, offset, data) {
+import PointCollection from './PointCollection';
+
+export default class PointAccessor {
+  offset: any;
+  data: any;
+  _points: PointCollection;
+
+  constructor(points: PointCollection, offset, data) {
     this.offset = offset;
     this._points = points;
     if (data !== undefined) {
@@ -32,5 +38,3 @@ class PointAccessor {
     this._points.colors[offset] = color;
   }
 }
-
-export default PointAccessor;

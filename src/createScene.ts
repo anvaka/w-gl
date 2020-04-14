@@ -103,7 +103,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     return options;
   }
 
-  function setPixelRatio(newPixelRatio) {
+  function setPixelRatio(newPixelRatio: number) {
     pixelRatio = newPixelRatio;
     drawContext.pixelRatio = pixelRatio;
     updateCanvasSize();

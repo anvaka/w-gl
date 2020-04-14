@@ -4,12 +4,33 @@ import makeThickWireProgram from './makeThickWireProgram';
 import WireAccessor from './WireAccessor';
 import Color from '../Color';
 
+type Point2D = {x: number, y: number, color?: number, };
+type Point3D = {x: number, y: number, z: number, color?: number};
+
+export type Point = Point2D | Point3D;
+export type Line = {
+  from: Point;
+  to: Point;
+};
+
 /**
  * Unlike lines, wires do not have width, and are always 1px wide, regardless
  * of resolution.
  */
 class WireCollection extends Element {
-  constructor(capacity, options) {
+  allowColors: boolean;
+  is3D: boolean;
+  itemsPerLine: number;
+  capacity: number;
+  count: number;
+  color: Color;
+  _program: any;
+  buffer: ArrayBuffer;
+  positions: Float32Array;
+  width: number;
+  colors: Uint32Array;
+
+  constructor(capacity: number, options) {
     super();
     let bytesPerElement = 4; // float32 or uint32 - both require 4 bytes
     this.allowColors = !options || options.allowColors === undefined || options.allowColors;
@@ -40,7 +61,7 @@ class WireCollection extends Element {
     this._program.draw(drawContext);
   }
 
-  setLineWidth(newLineWidth) {
+  setLineWidth(newLineWidth: number) {
     if (newLineWidth === this.width) return;
 
     let isThickWire = isWidthForThickWire(newLineWidth);
@@ -81,7 +102,7 @@ class WireCollection extends Element {
 
     if (this.is3D) {
       for (let i = 0; i < maxOffset; i += itemsPerLine) {
-        let from = {
+        let from: Point = {
           x: positions[i],
           y: positions[i + 1],
           z: positions[i + 2]
@@ -91,7 +112,7 @@ class WireCollection extends Element {
           from.color = this.colors[i + 3];
           next += 1;
         }
-        let to = {
+        let to: Point = {
           x: positions[next],
           y: positions[next + 1],
           z: positions[next + 2]
@@ -103,7 +124,7 @@ class WireCollection extends Element {
       }
     } else {
       for (let i = 0; i < maxOffset; i += itemsPerLine) {
-        let from = {
+        let from: Point = {
           x: positions[i],
           y: positions[i + 1],
           z: 0,
@@ -113,7 +134,7 @@ class WireCollection extends Element {
           from.color = this.colors[i + 2];
           next += 1;
         }
-        let to = {
+        let to: Point = {
           x: positions[next],
           y: positions[next + 1],
           z: 0,
