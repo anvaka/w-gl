@@ -2,7 +2,7 @@ import eventify from 'ngraph.events';
 
 import Element from './Element';
 import onClap from './clap';
-import {mat4, vec4, quat, vec3} from 'gl-matrix';
+import {mat4, vec4, quat} from 'gl-matrix';
 import {setMatrixArrayType} from 'gl-matrix/esm/common';
 import ViewMatrix from './ViewMatrix';
 import createSpaceMapCamera from './createSpaceMapCamera';
@@ -10,15 +10,18 @@ import createSpaceMapCamera from './createSpaceMapCamera';
 // Float32 is not enough for large scenes.
 setMatrixArrayType(Float64Array);
 
-export default function createScene(canvas, options) {
-  var width;
-  var height;
+export default function createScene(canvas: HTMLCanvasElement, options) {
+  let width: number;
+  let height: number;
   if (!options) options = {};
 
   var pixelRatio = options.devicePixelRatio || window.devicePixelRatio;
   var wglContextOptions = options.wglContext;
 
-  var gl = canvas.getContext('webgl', wglContextOptions) || canvas.getContext('experimental-webgl', wglContextOptions);
+  var gl = <WebGLRenderingContext>(
+            canvas.getContext('webgl', wglContextOptions) || 
+            canvas.getContext('experimental-webgl', wglContextOptions)
+          );
 
   gl.enable(gl.BLEND);
   gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -218,12 +221,18 @@ export default function createScene(canvas, options) {
     let clipSpaceX = (dpr * clientX / width) * 2 - 1;
     let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
 
-    let mx = vec4.transformMat4([], [clipSpaceX, clipSpaceY, 0, 1], inverseProjection);
+    let spare: vec4 = [0, 0, 0, 0];
+    let mx = vec4.transformMat4(spare, [clipSpaceX, clipSpaceY, 0, 1], inverseProjection);
     mx[0] /= mx[3]; mx[1] /= mx[3]; mx[2] /= mx[3]; mx[3] /= mx[3];
     vec4.transformMat4(mx, mx, view.cameraWorld);
+
+    // vec3.sub(mx, mx, view.position);
     mx[0] /= mx[3]; mx[1] /= mx[3]; mx[2] /= mx[3]; mx[3] /= mx[3];
-    vec3.sub(mx, mx, view.position);
-    vec3.normalize(mx, mx);
+    mx[0] -= view.position[0]; mx[1] -= view.position[1]; mx[2] -= view.position[2];
+
+    // vec3.normalize(mx, mx);
+    let l = Math.hypot(mx[0], mx[1], mx[2]);
+    mx[0] /= l; mx[1] /= l; mx[2] /= l;
     var targetZ = 0;
 
     // TODO: This is likely not going to work for all cases.
@@ -233,7 +242,7 @@ export default function createScene(canvas, options) {
 
     }
 
-    vec4.scaleAndAdd(mx, view.position, mx, distance)
+    vec4.scaleAndAdd(mx, <vec4>view.position, mx, distance)
 
     return {
       x: mx[0],
@@ -246,7 +255,7 @@ export default function createScene(canvas, options) {
     // TODO: this is not optimized either.
     var mvp = mat4.multiply(mat4.create(), projection, view.matrix)
     mat4.multiply(mvp, mvp, sceneRoot.model);
-    var coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
+    var coordinate = vec4.transformMat4(<vec4><unknown>[], [sceneX, sceneY, sceneZ, 1], mvp);
 
     var dpr = api.getPixelRatio();
     var x = width * (coordinate[0]/coordinate[3] + 1) * 0.5/dpr;
@@ -261,7 +270,7 @@ export default function createScene(canvas, options) {
     position[0] = (rect.left + rect.right)/2;
     position[1] = (rect.top + rect.bottom)/2;
     position[2] = nearHeight / Math.tan(drawContext.fov / 2);
-    quat.set(rotation, 0, 0, 0, 1);
+    quat.set(<vec4><unknown>rotation, 0, 0, 0, 1);
 
     drawContext.view.update();
     if (cameraController.setViewBox) {
@@ -269,7 +278,7 @@ export default function createScene(canvas, options) {
     }
   }
 
-  function renderFrame(immediate) {
+  function renderFrame(immediate = false) {
     if (immediate) {
       return frame();
     }
@@ -279,7 +288,7 @@ export default function createScene(canvas, options) {
 
   function frame() {
     gl.clear(gl.COLOR_BUFFER_BIT)
-    drawContext.wasDirty = sceneRoot.updateWorldTransform();
+    sceneRoot.updateWorldTransform();
     sceneRoot.draw(gl, drawContext);
     frameToken = 0;
   }

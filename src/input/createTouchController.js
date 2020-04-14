@@ -192,8 +192,8 @@ export default function createTouchController(inputTarget, camera) {
   }
 
   function stopDocumentTouchListeners() {
-    document.removeEventListener('touchmove', handleTouchMove, { passive: false });
-    document.removeEventListener('touchend', handleTouchEnd, { passive: false });
-    document.removeEventListener('touchcancel ', handleTouchEnd, { passive: false });
+    document.removeEventListener('touchmove', handleTouchMove);
+    document.removeEventListener('touchend', handleTouchEnd);
+    document.removeEventListener('touchcancel ', handleTouchEnd);
   }
 }

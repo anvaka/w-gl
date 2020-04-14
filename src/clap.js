@@ -6,7 +6,7 @@ var config = {
 export default onClap;
 
 function onClap(element, callback, ctx) {
-  var touchStartTime = new Date();
+  var touchStartTime = Date.now();
   var startPos
 
   element.addEventListener('click', invokeHandler, {passive: false})
@@ -20,7 +20,7 @@ function onClap(element, callback, ctx) {
     var touches = e.touches
 
     if (touches.length === 1) {
-      touchStartTime = new Date()
+      touchStartTime = Date.now()
       startPos = {
         x: e.touches[0].pageX,
         y: e.touches[0].pageY
@@ -34,7 +34,7 @@ function onClap(element, callback, ctx) {
 
     // single touch - use time difference to determine if it was a touch or
     // a swipe
-    var dt = new Date() - touchStartTime
+    var dt = Date.now() - touchStartTime
 
     // To long - ignore
     if (dt > config.maxSingleTouchTime) return

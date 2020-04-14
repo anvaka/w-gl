@@ -29,7 +29,7 @@ class ActivePoints extends Element {
   }
 
   draw(gl, drawContext) {
-    if (drawContext.wasDirty) {
+    if (drawContext.wasDirty) { // TODO: This is gone now.
       this.updateInteractiveTree();
     }
   }

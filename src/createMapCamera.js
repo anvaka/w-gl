@@ -19,7 +19,7 @@ export default function createMapCamera(scene, drawContext) {
 
   const panzoom = makePanzoom(canvas, {
     controller: wglController
-  }, api);
+  });
 
   return api;
 

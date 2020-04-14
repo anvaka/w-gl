@@ -21,7 +21,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
   // Rotate the camera so it looks to the central point in Oxy plane from distance r.
   let phi = clamp(-Math.PI / 2, minPhi, maxPhi);
 
-  let planeNormal = [0, 0, 1];
+  let planeNormal: vec3 = [0, 0, 1];
 
   // camera inclination angle. (Angle above Oxz plane)
   let minTheta = option(sceneOptions.minTheta, 0);
@@ -80,22 +80,18 @@ export default function createSpaceMapCamera(scene, drawContext) {
 
   function getZoomPlaneIntersection(clientX, clientY) {
     let viewPoint = scene.getSceneCoordinate(clientX, clientY);
-    let ray = vec3.sub(
-      [],
-      [viewPoint.x, viewPoint.y, viewPoint.z],
-      cameraPosition
-    );
+    let spare: vec3 = [0, 0, 0];
+    let ray = vec3.sub(spare, [viewPoint.x, viewPoint.y, viewPoint.z], cameraPosition);
     vec3.normalize(ray, ray);
 
     let denom = vec3.dot(planeNormal, ray);
     if (Math.abs(denom) > 1e-7) {
       let t =
         vec3.dot(
-          vec3.sub([], centerPointPosition, cameraPosition),
+          vec3.sub([0, 0, 0], centerPointPosition, cameraPosition),
           planeNormal
         ) / denom;
-      let isect = vec3.scaleAndAdd([], cameraPosition, ray, t);
-      return isect;
+      return vec3.scaleAndAdd([0, 0, 0], cameraPosition, ray, t);
     }
   }
 
@@ -246,7 +242,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 }
 
-function getSpherical(r, theta, phi) {
+function getSpherical(r, theta, phi): vec3 {
   let z = r * Math.cos(theta);
   let x = r * Math.sin(theta) * Math.cos(phi);
   let y = r * Math.sin(theta) * Math.sin(phi);

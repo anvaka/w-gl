@@ -1,6 +1,6 @@
-import {mat4, vec3} from 'gl-matrix';
+import {mat4, vec3, quat} from 'gl-matrix';
 
-let spareVec3 = [0, 0, 0];
+let spareVec3: vec3 = [0, 0, 0];
 const xAxis = [1, 0, 0];
 const yAxis = [0, 1, 0];
 const zAxis = [0, 0, 1];
@@ -9,7 +9,12 @@ const zAxis = [0, 0, 1];
  * View matrix allows you to place camera anywhere in the world
  */
 export default class ViewMatrix {
-  constructor(viewMatrix) {
+  matrix: mat4;
+  cameraWorld: mat4;
+  position: vec3;
+  rotation: quat;
+
+  constructor(viewMatrix?: mat4) {
     this.matrix = viewMatrix || mat4.create();
     // True position of the camera in the world:
     this.cameraWorld = mat4.invert(mat4.create(), this.matrix);

@@ -13,6 +13,7 @@ class Element {
 
     this.type = 'Element';
     this.scene = null;
+    this.parent = null;
   }
 
   appendChild(child, sendToBack) {

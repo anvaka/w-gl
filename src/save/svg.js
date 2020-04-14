@@ -227,7 +227,7 @@ function getProjector(element, context, roundFactor) {
   const rounder = makeRounder(roundFactor);
 
   return function(sceneX, sceneY, sceneZ) {
-    const coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
+    const coordinate = vec4.transformMat4([0, 0, 0, 0], [sceneX, sceneY, sceneZ, 1], mvp);
     var x = rounder(width * (coordinate[0]/coordinate[3] + 1) * 0.5);
     var y = rounder(height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5));
     return {x, y, isBehind: coordinate[3] <= 0};
