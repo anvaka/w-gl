@@ -2,6 +2,13 @@
  * Just to track changes for a single touch event, we create this state:
  */
 export class TouchState {
+  x: number;
+  y: number;
+  lastX: number;
+  lastY: number;
+  id: any;
+  createdAt: number;
+
   constructor(touch) {
     this.x = touch.clientX;
     this.y = touch.clientY;
@@ -10,6 +17,7 @@ export class TouchState {
     this.id = touch.identifier;
     this.createdAt = Date.now();
   }
+
   move(touch) {
     this.lastX = this.x;
     this.lastY = this.y;
@@ -34,6 +42,15 @@ const INCLINE = 3; // Locked to inclination.
  * - Should we change incline with this gesture?
  */
 export class MultiTouchState {
+  allowRotation: any;
+  state: number;
+  canRotate: boolean;
+  canScale: boolean;
+  canIncline: boolean;
+  first: any;
+  second: any;
+  stateChanged: boolean;
+
   constructor(allowRotation) {
     this.allowRotation = allowRotation;
     this.state = UNKNOWN;

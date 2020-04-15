@@ -1,7 +1,7 @@
 /**
  * Allows smooth kinetic scrolling of the surface
  */
-export default function createKineticAnimation(getCurrentPoint, moveCallback, settings) {
+export default function createKineticAnimation(getCurrentPoint, moveCallback, settings?: any) {
   if (typeof settings !== 'object') settings = {};
  
   let EPS = 1e-3;
