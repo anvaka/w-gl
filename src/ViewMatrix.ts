@@ -5,6 +5,7 @@ const xAxis = [1, 0, 0];
 const yAxis = [0, 1, 0];
 const zAxis = [0, 0, 1];
 
+
 /**
  * View matrix allows you to place camera anywhere in the world
  */
@@ -25,8 +26,12 @@ export default class ViewMatrix {
     this.deconstructPositionRotation();
   }
 
-  lookAt(eye, center, up) {
-    mat4.lookAt(this.cameraWorld, eye, center, up);
+  lookAt(eye: number[], center: number[], up: number[]) {
+    mat4.lookAt(this.cameraWorld, 
+      eye as unknown as Float32Array, 
+      center as unknown as Float32Array,
+      up as unknown as Float32Array
+    );
     this.deconstructPositionRotation();
     return this;
   }
@@ -42,8 +47,8 @@ export default class ViewMatrix {
     mat4.getRotation(this.rotation, this.cameraWorld);
   }
 
-  translateOnAxis(axis, distance) {
-    let translation = vec3.transformQuat(spareVec3, axis, this.rotation);
+  translateOnAxis(axis: number[], distance: number) {
+    let translation = vec3.transformQuat(spareVec3, axis as unknown as Float32Array, this.rotation);
     vec3.scaleAndAdd(this.position, this.position, translation, distance);
     return this;
   } 

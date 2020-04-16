@@ -50,7 +50,7 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
 
     let data = pointCollection.buffer;
 
-    gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel);
+    gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel as Iterable<number>);
     gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
     gl.uniform3fv(locations.uniforms.uOrigin, drawContext.view.position);

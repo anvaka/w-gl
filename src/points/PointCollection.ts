@@ -3,6 +3,8 @@ import makePointsProgram from './makePointsProgram';
 import Element from '../Element';
 import Color from '../Color';
 import PointAccessor from './PointAccessor';
+import { DrawContext } from 'src/createScene';
+import { ColorPoint } from 'src/global';
 
 export default class PointCollection extends Element {
   is3D: boolean;
@@ -12,7 +14,7 @@ export default class PointCollection extends Element {
   color: Color;
   buffer: ArrayBuffer;
   positions: Float32Array;
-  colors: Uint32Array;
+  colors: Uint32Array | null;
   size?: number;
   itemsPerPoint: number;
   _program: any;
@@ -36,12 +38,10 @@ export default class PointCollection extends Element {
     this._program = null;
     this.buffer = new ArrayBuffer(capacity * this.itemsPerPoint * 4);
     this.positions = new Float32Array(this.buffer);
-    if (this.allowColors) {
-      this.colors = new Uint32Array(this.buffer);
-    }
+    this.colors = this.allowColors ? new Uint32Array(this.buffer) : null;
   }
 
-  draw(gl: WebGLRenderingContext, drawContext) {
+  draw(gl: WebGLRenderingContext, drawContext: DrawContext) {
     if (!this._program) {
       this._program = makePointsProgram(gl, this);
     }
@@ -57,7 +57,7 @@ export default class PointCollection extends Element {
     }
   }
 
-  add(point, data) {
+  add(point: ColorPoint, data?: any) {
     if (!point) throw new Error('Point is required');
 
     if (this.count >= this.capacity)  {

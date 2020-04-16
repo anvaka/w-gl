@@ -1,12 +1,67 @@
 import {mat4, vec4} from 'gl-matrix';
-import createGraph from 'ngraph.graph';
+import createGraph, {NodeId} from 'ngraph.graph';
+import Element from '../Element';
+import { WglScene, DrawContext } from 'src/createScene';
+import WireCollection from 'src/lines/WireCollection';
+import { ColorPoint } from 'src/global';
 
-export default function svg(scene, settings) {
-  settings = settings || {};
-  let renderers = initRenderers();
+
+type StackNode = {
+  from?: NodeId,
+  to: NodeId
+};
+
+type ProjectedPoint = {
+  x: number,
+  y: number,
+  isBehind?: boolean
+}
+
+/**
+ * When exporting a collection of wires we want to limit amount of movement of a pen
+ * head. For this we construct a graph of all paths, and perform DFS on it. It gives
+ * fewer paths overall and a nice order for drawing.
+ */
+type ExportGraph = import('ngraph.graph').Graph<ProjectedPoint, any> & import('ngraph.events').EventedType
+
+interface SVGRenderingContext extends DrawContext {
+  background: string
+  write: (s: string) => void
+  scene: WglScene
+}
+
+interface SVGExportSettings {
+  /**
+   * Called before a collection of points is printed to the output. If function returns
+   * false, then this collection of points is not printed.
+   */
+  beforeWrite?: (points: ProjectedPoint[]) => boolean;
+
+  /**
+   * Allow consumers to write a license information (right between <?xml> and <!doctype..>)
+   */
+  open?: () => string;
+
+  /**
+   * Allow consumers to write any additional elements before closing the </svg> document
+   */
+  close?: () => string;
+
+  /**
+   * When this is boolean `true`, each value is `Math.round()`'ed  before it is printed. If the
+   * value is a `number` then it indicates amount of significant digits for the rounding.
+   * 
+   * `false` by default - values are printed at maximum precision.
+   */
+  round?: boolean | number;
+}
+
+export default function svg(scene: WglScene, settings: SVGExportSettings = {}) {
+  const renderers = initRenderers();
   const sceneRoot = scene.getRoot();
   sceneRoot.updateWorldTransform();
-  let out = [];
+
+  let out: string[] = [];
   let context = Object.assign({
     background: toHexColor(scene.getClearColor()),
     write,
@@ -19,11 +74,11 @@ export default function svg(scene, settings) {
 
   return out.join('\n');
 
-  function write(str) {
+  function write(str: string) {
     out.push(str);
   }
 
-  function draw(children) {
+  function draw(children: Element[]) {
     let layerSettings = {
       beforeWrite: settings.beforeWrite || yes,
       round: settings.round === undefined ? undefined: settings.round
@@ -41,7 +96,7 @@ export default function svg(scene, settings) {
 
 function yes() { return true; }
 
-function printHeader(context, settings) {
+function printHeader(context: SVGRenderingContext, settings: SVGExportSettings) {
   const viewBox = `0 0 ${context.width} ${context.height}`;
   context.write('<?xml version="1.0" encoding="utf-8"?>');
 
@@ -65,7 +120,7 @@ function printHeader(context, settings) {
   }
 }
 
-function closeDocument(context, settings) {
+function closeDocument(context: SVGRenderingContext, settings: SVGExportSettings) {
   if (settings.close) {
     context.write(settings.close());
   }
@@ -78,13 +133,14 @@ function initRenderers() {
   return renderers;
 }
 
-function wireRenderer(element, context, settings) {
+function wireRenderer(element: WireCollection, context: SVGRenderingContext, settings: SVGExportSettings) {
   if (!element.scene) return;
   let {beforeWrite, round} = settings;
 
-  let elementGraph = createGraph();
+  let elementGraph = createGraph() as ExportGraph;
 
   let project = getProjector(element, context, round)
+
   element.forEachLine((from, to) => {
     let f = project(from.x, from.y, from.z);
     let t = project(to.x, to.y, to.z);
@@ -106,18 +162,18 @@ function wireRenderer(element, context, settings) {
   let elementWidth = element.width === undefined ? 1 : element.width;
   const strokeWidth = elementWidth / element.scene.getPixelRatio();
   let style = `fill="none" stroke-width="${strokeWidth}" stroke="${strokeColor}"`
-  let openTag = element.id ? `<g id="${element.id}" ${style}>` : `<g ${style}>`
+  let openTag = (element as any).id ? `<g id="${(element as any).id}" ${style}>` : `<g ${style}>`
   context.write(openTag);
 
   let globalOrder = getGlobalOrder(elementGraph);
-  let lastNode = null;
-  let lastPath = null;
+  let lastNode: NodeId | null = null;
+  let lastPath: NodeId[] | null = null;
   globalOrder.forEach(link => {
     let {from, to} = link;
     if (from !== lastNode) {
       if (to === lastNode) {
         // Swap them so that we can keep the path going.
-        let temp = from;
+        let temp = from as NodeId;
         from = to;
         to = temp;
       } else {
@@ -125,7 +181,7 @@ function wireRenderer(element, context, settings) {
         lastPath = [];
       }
     }
-    lastPath.push(from, to);
+    if (lastPath) lastPath.push(from as NodeId, to);
     lastNode = to;
   });
   commitLastPath();
@@ -134,20 +190,25 @@ function wireRenderer(element, context, settings) {
 
   function commitLastPath() {
     if (!lastPath) return;
-    lastPath = lastPath.map(x => elementGraph.getNode(x).data);
-    if (!beforeWrite(lastPath)) {
+    let points = lastPath.map(x => {
+      let node = elementGraph.getNode(x);
+      if (node) return node.data;
+      throw new Error('Node is found in the path construction, but missing in the graph')
+    });
+
+    if (beforeWrite && !beforeWrite(points)) {
       return;
     }
 
-    let d = `M${lastPath[0].x} ${lastPath[0].y} L` + lastPath.slice(1).map(p => `${p.x} ${p.y}`).join(',');
+    let d = `M${points[0].x} ${points[0].y} L` + points.slice(1).map(p => `${p.x} ${p.y}`).join(',');
     context.write(`<path d="${d}"/>`)
   }
 }
 
-function getGlobalOrder(graph) {
+function getGlobalOrder(graph: ExportGraph) {
   let visited = new Set();
-  let globalOrder = [];
-  let stack = [];
+  let globalOrder: StackNode[] = [];
+  let stack: StackNode[] = [];
 
   graph.forEachNode(node => {
     if (visited.has(node.id)) return;
@@ -159,7 +220,8 @@ function getGlobalOrder(graph) {
 
   function runDFS() {
     while (stack.length) {
-      let fromTo = stack.pop();
+      let fromTo = stack.pop() as StackNode;
+
       if (fromTo.to && fromTo.from) {
         globalOrder.push({from: fromTo.from, to: fromTo.to});
       }
@@ -168,13 +230,13 @@ function getGlobalOrder(graph) {
       visited.add(fromTo.to);
 
       graph.forEachLinkedNode(fromTo.to, function(other) {
-        if (!visited.has(other.id)) stack.push({from: fromTo.to, to: other.id});
-      });
+        if (!visited.has(other.id)) stack.push({from: (fromTo as StackNode).to, to: other.id});
+      }, false);
     }
   }
 }
 
-function getColor(el, from?, to?) {
+function getColor(el: WireCollection, from?: ColorPoint, to?: ColorPoint) {
   if (el.allowColors && from && from.color && to && to.color) {
     return mixUint32Color(from.color, to.color);
   }
@@ -186,7 +248,7 @@ function getColor(el, from?, to?) {
   ]
 }
 
-function mixUint32Color(c0, c1, t = 0.5) {
+function mixUint32Color(c0: number, c1: number, t = 0.5) {
   let a = toRgba(c0);
   let b = toRgba(c1);
 
@@ -198,7 +260,7 @@ function mixUint32Color(c0, c1, t = 0.5) {
   ]
 }
 
-function toRgba(x) {
+function toRgba(x: number) {
   return [
     (x >> 24) & 0xff / 255,
     (x >> 16) & 0xff / 255,
@@ -207,30 +269,30 @@ function toRgba(x) {
   ];
 }
 
-function toHexColor(c) {
+function toHexColor(c: number[]) {
   let r = hexString(c[0]);
   let g = hexString(c[1])
   let b = hexString(c[2])
   return `#${r}${g}${b}`;
 }
 
-function hexString(x) {
+function hexString(x: number) {
   let v = Math.floor(x * 255).toString(16);
   return (v.length === 1) ? '0' + v : v;
 }
 
-function getProjector(element, context, roundFactor) {
+function getProjector(element: WireCollection, context: SVGRenderingContext, roundFactor?: number | boolean) {
   const {width, height, projection, view} = context;
   const mvp = mat4.multiply(mat4.create(), projection, view.matrix)
   mat4.multiply(mvp, mvp, element.worldModel);
 
   const rounder = makeRounder(roundFactor);
 
-  return function(sceneX, sceneY, sceneZ) {
-    const coordinate = vec4.transformMat4([0, 0, 0, 0], [sceneX, sceneY, sceneZ, 1], mvp);
+  return function(sceneX: number, sceneY: number, sceneZ?: number) {
+    const coordinate = vec4.transformMat4([0, 0, 0, 0], [sceneX, sceneY, sceneZ || 0, 1], mvp);
     var x = rounder(width * (coordinate[0]/coordinate[3] + 1) * 0.5);
     var y = rounder(height * (1 - (coordinate[1]/coordinate[3] + 1) * 0.5));
-    return {x, y, isBehind: coordinate[3] <= 0};
+    return {x, y, isBehind: coordinate[3] <= 0} as ProjectedPoint;
   }
 }
 
@@ -238,27 +300,27 @@ function id(x) {
   return x;
 }
 
-function makeRounder(roundFactor) {
+function makeRounder(roundFactor?: number | boolean) {
   if (roundFactor === undefined) return id;
   if (roundFactor === true || roundFactor === 0) {
     return Math.round;
   }
-  return function(x) {
-    return Math.round(x * roundFactor) / roundFactor;
+  return function(x: number) {
+    return Math.round(x * (roundFactor as number)) / (roundFactor as number);
   }
 }
 
 /**
  * Clips line to the screen rect
  */
-function clipToViewPort(from, to, width, height) {
+function clipToViewPort(from: ProjectedPoint, to: ProjectedPoint, width: number, height: number) {
   return clipToPlane(from, to, {x: 0, y: 0}, {x: 0, y: 1}) &&
       clipToPlane(from, to, {x: 0, y: 0}, {x: 1, y: 0}) &&
       clipToPlane(from, to, {x: 0, y: height}, {x: 0, y: -1}) &&
       clipToPlane(from, to, {x: width, y: 0}, {x: -1, y: 0});
 }
 
-function clipToPlane(q1, q2, p, n) {
+function clipToPlane(q1: ProjectedPoint, q2: ProjectedPoint, p: ProjectedPoint, n: ProjectedPoint) {
   let d1 = getDotNorm(q1, p, n);
   let d2 = getDotNorm(q2, p, n);
   if (d1 <= 0 && d2 <= 0) return false; // they are both out (or degenerative case)
@@ -277,6 +339,6 @@ function clipToPlane(q1, q2, p, n) {
   return true;
 }
 
-function getDotNorm(q, p, n) {
+function getDotNorm(q: ProjectedPoint, p: ProjectedPoint, n: ProjectedPoint) {
   return (q.x - p.x) * n.x + (q.y - p.y) * n.y;
 }

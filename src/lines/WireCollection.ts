@@ -3,21 +3,19 @@ import makeWireProgram from './makeWireProgram';
 import makeThickWireProgram from './makeThickWireProgram';
 import WireAccessor from './WireAccessor';
 import Color from '../Color';
+import { ColorPoint, Line } from 'src/global';
 
-type Point2D = {x: number, y: number, color?: number, };
-type Point3D = {x: number, y: number, z: number, color?: number};
-
-export type Point = Point2D | Point3D;
-export type Line = {
-  from: Point;
-  to: Point;
-};
+export interface WireCollectionOptions {
+  allowColors?: boolean
+  is3D?: boolean
+  width?: number
+}
 
 /**
  * Unlike lines, wires do not have width, and are always 1px wide, regardless
  * of resolution.
  */
-class WireCollection extends Element {
+export default class WireCollection extends Element {
   allowColors: boolean;
   is3D: boolean;
   itemsPerLine: number;
@@ -26,12 +24,13 @@ class WireCollection extends Element {
   color: Color;
   _program: any;
   buffer: ArrayBuffer;
-  positions: Float32Array;
+  positions: Float32Array; // Note: this type may not be enough sometimes.
   width: number;
-  colors: Uint32Array;
+  colors: Uint32Array | null;
 
-  constructor(capacity: number, options) {
+  constructor(capacity: number, options: WireCollectionOptions) {
     super();
+
     let bytesPerElement = 4; // float32 or uint32 - both require 4 bytes
     this.allowColors = !options || options.allowColors === undefined || options.allowColors;
     this.is3D = !options || options.is3D === undefined || options.is3D;
@@ -46,11 +45,13 @@ class WireCollection extends Element {
     this._program = null;
     this.buffer = new ArrayBuffer(capacity * this.itemsPerLine * bytesPerElement)
     this.positions = new Float32Array(this.buffer);
-    this.width = options && options.width;
+    this.width = (options && options.width) || 1;
 
     if (this.allowColors) {
       // We are sharing the buffer!
       this.colors = new Uint32Array(this.buffer);
+    } else {
+      this.colors = null;
     }
   }
 
@@ -75,13 +76,15 @@ class WireCollection extends Element {
     }
 
     // we need to switch the program
-    let parent = this.parent;
-    parent.removeChild(this)
-    this.dispose();
-    parent.appendChild(this);
+    if (this.parent) {
+      let parent = this.parent;
+      parent.removeChild(this)
+      this.dispose();
+      parent.appendChild(this);
+    }
   }
 
-  add(line) {
+  add(line: Line) {
     if (!line) throw new Error('Line is required');
 
     if (this.count >= this.capacity)  {
@@ -96,50 +99,50 @@ class WireCollection extends Element {
     return ui;
   }
 
-  forEachLine(callback) {
-    const {positions, count, itemsPerLine, allowColors} = this;
+  forEachLine(callback: (from: ColorPoint, to: ColorPoint) => void) {
+    const {positions, count, itemsPerLine} = this;
     let maxOffset = count * itemsPerLine;
 
     if (this.is3D) {
       for (let i = 0; i < maxOffset; i += itemsPerLine) {
-        let from: Point = {
+        let from: ColorPoint = {
           x: positions[i],
           y: positions[i + 1],
           z: positions[i + 2]
         }
         let next = i + 3;
-        if (allowColors) {
+        if (this.colors) {
           from.color = this.colors[i + 3];
           next += 1;
         }
-        let to: Point = {
+        let to: ColorPoint = {
           x: positions[next],
           y: positions[next + 1],
           z: positions[next + 2]
         };
-        if (allowColors) {
+        if (this.colors) {
           to.color = this.colors[next + 3];
         }
         callback(from, to);
       }
     } else {
       for (let i = 0; i < maxOffset; i += itemsPerLine) {
-        let from: Point = {
+        let from: ColorPoint = {
           x: positions[i],
           y: positions[i + 1],
           z: 0,
         }
         let next = i + 2;
-        if (allowColors) {
+        if (this.colors) {
           from.color = this.colors[i + 2];
           next += 1;
         }
-        let to: Point = {
+        let to: ColorPoint = {
           x: positions[next],
           y: positions[next + 1],
           z: 0,
         };
-        if (allowColors) {
+        if (this.colors) {
           to.color = this.colors[next + 2];
         }
         callback(from, to);
@@ -172,8 +175,6 @@ class WireCollection extends Element {
   }
 }
 
-export default WireCollection;
-
-function isWidthForThickWire(width) {
+function isWidthForThickWire(width?: number) {
   return width !== undefined && width !== 1 && width > 0;
 }

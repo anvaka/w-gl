@@ -1,20 +1,30 @@
-var config = {
+const config = {
   maxSingleTouchTime: 300, // ms
   singleTapDistanceSquared: 25 // within 5px we consider it as a single tap
 }
 
-export default function onClap(element: Element, callback, ctx) {
-  var touchStartTime = Date.now();
-  var startPos
+type Point = {
+  x: number;
+  y: number;
+}
 
-  element.addEventListener('click', invokeHandler, {passive: false})
+type ClapHandler = {
+  (e: MouseEvent) : void;
+  (e: Touch) : void;
+}
+
+export default function onClap(element: Element, callback: ClapHandler, ctx?: any) {
+  var touchStartTime = Date.now();
+  let startPos: Point;
+
+  element.addEventListener('click', invokeHandler as ClapHandler, {passive: false})
 
   element.addEventListener('touchend', handleTouchEnd, {passive: false})
   element.addEventListener('touchstart', handleTouchStart, {passive: false})
 
   return disposePrevHandler;
 
-  function handleTouchStart(e) {
+  function handleTouchStart(e: TouchEvent) {
     var touches = e.touches
 
     if (touches.length === 1) {
@@ -26,7 +36,7 @@ export default function onClap(element: Element, callback, ctx) {
     }
   }
 
-  function handleTouchEnd(e) {
+  function handleTouchEnd(e: TouchEvent) {
     // multitouch - ignore
     if (e.touches.length > 1) return
 
@@ -47,12 +57,12 @@ export default function onClap(element: Element, callback, ctx) {
   }
 
   function disposePrevHandler() {
-    element.removeEventListener('click', invokeHandler)
+    element.removeEventListener('click', invokeHandler as ClapHandler)
     element.removeEventListener('touchend', handleTouchEnd)
     element.removeEventListener('touchstart', handleTouchStart)
   }
 
-  function invokeHandler(e) {
+  function invokeHandler(e: MouseEvent | Touch) {
     callback.call(ctx, e)
   }
 }

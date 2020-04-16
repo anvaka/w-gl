@@ -1,6 +1,8 @@
 import Element from '../Element';
 import Color from '../Color';
 import makeLineStripProgram from './makeLineStripProgram';
+import {DrawContext} from 'src/createScene';
+import {ColorPoint} from 'src/global';
 
 /**
  * Line strip is implemented as a cyclic buffer. Each subsequent element of the
@@ -18,7 +20,7 @@ export default class LineStripCollection extends Element {
   color: Color;
   buffer: ArrayBuffer;
   positions: Float32Array;
-  colors: Uint32Array;
+  colors: Uint32Array | null;
 
   constructor(capacity, options) {
     super();
@@ -46,26 +48,28 @@ export default class LineStripCollection extends Element {
     if (this.allowColors) {
       // We are sharing the buffer!
       this.colors = new Uint32Array(this.buffer);
+    } else {
+      this.colors = null;
     }
   }
 
-  draw(gl, drawContext) {
+  draw(gl: WebGLRenderingContext, drawContext: DrawContext) {
     if (!this._program) {
       this._program = makeLineStripProgram(gl, this);
     }
     this._program.draw(this, drawContext);
   }
 
-  add(segment) {
+  add(point: ColorPoint) {
     let offset = this.nextElementIndex * this.itemsPerLine;
     let positions = this.positions;
-    positions[offset] = segment.x; offset += 1;
-    positions[offset] = segment.y; offset += 1;
+    positions[offset] = point.x; offset += 1;
+    positions[offset] = point.y; offset += 1;
     if (this.is3D) {
-      positions[offset] = segment.z || 0; offset += 1;
+      positions[offset] = point.z || 0; offset += 1;
     }
-    if (this.allowColors) {
-      this.colors[offset] = segment.color === undefined ? 0xffffffff : segment.color;
+    if (this.colors) {
+      this.colors[offset] = point.color === undefined ? 0xffffffff : point.color;
     }
     this.nextElementIndex += 1;
     this.drawCount += 1;
@@ -73,12 +77,12 @@ export default class LineStripCollection extends Element {
     if (this.nextElementIndex > this.capacity) {
       this.nextElementIndex = 1;
       let firstOffset = 0;
-      positions[firstOffset] = segment.x; firstOffset += 1;
-      positions[firstOffset] = segment.y; firstOffset += 1;
+      positions[firstOffset] = point.x; firstOffset += 1;
+      positions[firstOffset] = point.y; firstOffset += 1;
       if (this.is3D) {
-        positions[firstOffset] = segment.z || 0; firstOffset += 1;
+        positions[firstOffset] = point.z || 0; firstOffset += 1;
       }
-      if (this.allowColors) {
+      if (this.colors) {
         this.colors[firstOffset] = this.colors[offset];
       }
       this.madeFullCircle = true;

@@ -1,11 +1,13 @@
 import {mat4} from 'gl-matrix';
+import {WglScene, DrawContext} from './createScene';
+
 /**
  * Represents a single element in the scene tree
  */
 export default class Element {
   children: Element[];
 
-  parent: Element;
+  parent: Element | null;
 
   /**
    * Transforms local coordinate system to parent coordinate system
@@ -21,7 +23,7 @@ export default class Element {
 
   type: string;
 
-  scene: any;
+  scene: WglScene | null;
 
   constructor() {
     this.children = [];
@@ -49,7 +51,7 @@ export default class Element {
     if (this.scene) this.scene.renderFrame();
   }
 
-  bindScene(scene) {
+  bindScene(scene: WglScene | null) {
     this.scene = scene;
   }
 
@@ -64,49 +66,72 @@ export default class Element {
     if (exitCallback) exitCallback(this);
   }
 
-  rotate(rad, axis) {
+  /**
+   * Rotates this element `rad` radians around `axis`.
+   */
+  rotate(rad: number, axis: number[]) {
     mat4.rotate(this.model, this.model, rad, axis);
     this.worldTransformNeedsUpdate = true;
+
     if (this.scene) this.scene.renderFrame();
     return this;
   }
 
-  rotateX(rad) {
+  /**
+   * Rotate `rad` radians around X axis
+   */
+  rotateX(rad: number) {
     mat4.rotateX(this.model, this.model, rad);
     this.worldTransformNeedsUpdate = true;
     if (this.scene) this.scene.renderFrame();
     return this;
   }
 
-  rotateY(rad) {
+  /**
+   * Rotate `rad` radians around Y axis
+   */
+  rotateY(rad: number) {
     mat4.rotateY(this.model, this.model, rad);
     this.worldTransformNeedsUpdate = true;
     if (this.scene) this.scene.renderFrame();
     return this;
   }
 
-  rotateZ(rad) {
+  /**
+   * Rotate `rad` radians around Z axis
+   */
+  rotateZ(rad: number) {
     mat4.rotateZ(this.model, this.model, rad);
     this.worldTransformNeedsUpdate = true;
     if (this.scene) this.scene.renderFrame();
     return this;
   }
 
-  scale(v) {
+  /**
+   * Scales this element by vector `v`
+   */
+  scale(v: number[]) {
     mat4.scale(this.model, this.model, v);
     this.worldTransformNeedsUpdate = true;
     if (this.scene) this.scene.renderFrame();
     return this;
   }
 
-  translate(v) {
+  /**
+   * Translate this element by vector `v`
+   */
+  translate(v: number[]) {
     mat4.translate(this.model, this.model, v);
     this.worldTransformNeedsUpdate = true;
     if (this.scene) this.scene.renderFrame();
     return this;
   }
 
-  removeChild(child) {
+  /**
+   * Removes the child from the collection of children. Takes `O(n)` time where `n` is number
+   * of children.
+   */
+  removeChild(child: Element) {
     // TODO: should this be faster?
     let childIdx = this.children.indexOf(child);
     if (childIdx > -1) {
@@ -138,10 +163,13 @@ export default class Element {
     return wasDirty;
   }
 
-  draw(gl, screen) {
+  /**
+   * Requests the element to draw itself (and its children)
+   */
+  draw(gl: WebGLRenderingContext, drawContext: DrawContext) {
     for (var i = 0; i < this.children.length; ++i) {
       var child = this.children[i];
-      child.draw(gl, screen);
+      child.draw(gl, drawContext);
     }
   }
 

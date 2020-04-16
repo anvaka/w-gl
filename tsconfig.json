@@ -5,12 +5,16 @@
     "sourceMap": false,
     "module": "esnext",
     "target": "esnext",
-    "allowJs": true,
+    "allowJs": false,
+    "noImplicitAny": false,
     "moduleResolution": "node",
-    "checkJs": true,
+    "typeRoots": [
+      "node_modules/@types",
+      "types"
+    ],
   },
   "include": [
-    "src"
+    "src",
   ],
   "exclude": [
     "node_modules",

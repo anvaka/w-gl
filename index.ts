@@ -2,8 +2,6 @@ export {default as scene} from './src/createScene';
 export {default as createScene} from './src/createScene';
 
 export {default as PointCollection} from './src/points/PointCollection';
-export {default as Point} from './src/points/Point';
-
 export {default as WireCollection} from './src/lines/WireCollection';
 export {default as LineStripCollection} from './src/lines/LineStripCollection';
 export {default as Element} from './src/Element';

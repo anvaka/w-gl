@@ -10,26 +10,32 @@ const glUtils = {
 export default glUtils;
 
 function compile(gl: WebGLRenderingContext, type: GLenum, shaderSrc: string) {
-  var shader = gl.createShader(type);
+  const shader = gl.createShader(type);
+  if (!shader) {
+    throw new Error('Failed to create a shared ' + shaderSrc);
+  }
   gl.shaderSource(shader, shaderSrc);
   gl.compileShader(shader);
 
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw new Error(gl.getShaderInfoLog(shader));
+    throw new Error(gl.getShaderInfoLog(shader) || 'Failed to compile shader ' + shaderSrc);
   }
 
   return shader;
 }
 
 function link(gl: WebGLRenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader) {
-  var program = gl.createProgram();
+  const program = gl.createProgram();
+  if (!program) {
+    throw new Error('Failed to link a program');
+  }
   gl.attachShader(program, vertexShader);
   gl.attachShader(program, fragmentShader);
 
   gl.linkProgram(program);
 
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    throw new Error(gl.getProgramInfoLog(program));
+    throw new Error(gl.getProgramInfoLog(program) || 'Failed to link a program');
   }
 
   return program;
@@ -47,8 +53,11 @@ function getAttributes(gl: WebGLRenderingContext, program: WebGLProgram) {
 
   var numberOfAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
   for (var i = 0; i < numberOfAttributes; ++i) {
-    var name = gl.getActiveAttrib(program, i).name;
-    attributes[name] = gl.getAttribLocation(program, name)
+    var activeAttribute = gl.getActiveAttrib(program, i);
+    if (activeAttribute) {
+      let name = activeAttribute.name;
+      attributes[name] = gl.getAttribLocation(program, name)
+    }
   }
 
   return attributes;
@@ -58,8 +67,11 @@ function getUniforms(gl: WebGLRenderingContext, program: WebGLProgram) {
   var uniforms = Object.create(null);
   var numberOfUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
   for (var i = 0; i < numberOfUniforms; ++i) {
-    var name = gl.getActiveUniform(program, i).name;
-    uniforms[name] = gl.getUniformLocation(program, name)
+    var activeUniform = gl.getActiveUniform(program, i);
+    if (activeUniform) {
+      let name = activeUniform.name;
+      uniforms[name] = gl.getUniformLocation(program, name)
+    }
   }
 
   return uniforms;

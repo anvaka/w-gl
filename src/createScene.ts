@@ -1,46 +1,152 @@
-import eventify from 'ngraph.events';
+import eventify, { EventedType } from 'ngraph.events';
 
 import Element from './Element';
 import onClap from './clap';
-import {mat4, vec4, quat} from 'gl-matrix';
+import {mat4, vec4, vec3, quat} from 'gl-matrix';
 import {setMatrixArrayType} from 'gl-matrix/esm/common';
 import ViewMatrix from './ViewMatrix';
 import createSpaceMapCamera from './createSpaceMapCamera';
+import {EventCallback, EventKey} from 'ngraph.events';
 
 // Float32 is not enough for large scenes.
 setMatrixArrayType(Float64Array);
 
-export default function createScene(canvas: HTMLCanvasElement, options) {
+type Size = {
+  width: number;
+  height: number;
+}
+
+type Rectangle = {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+type WGLSceneOptions = {
+  /**
+   * Default device pixel ratio to be used for scene. If non specified
+   * window.devicePixelRatio is used.
+   */
+  devicePixelRatio?: number;
+
+  /**
+   * Size of the scene;
+   */
+  size?: Size;
+
+  /**
+   * WebGL context options. 
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
+   */
+  wglContextOptions?: any
+
+  /**
+   * Field of view angle defined in radians.
+   */
+  fov?: number
+
+  /**
+   * Near bound of the frustum
+   */
+  near?: number
+
+  /**
+   * far bound of the frustum
+   */
+  far?: number
+
+  /**
+   * Don't use this - this is experimental bit.
+   */
+  camera?: any
+}
+
+/**
+ * A context that is passed to individual rendering programs of the w-gl
+ */
+export interface DrawContext {
+  width: number;
+  height: number;
+  fov: number;
+  pixelRatio: number;
+  canvas: HTMLCanvasElement;
+  projection: mat4;
+  view: ViewMatrix;
+  center: vec3;
+}
+
+
+export interface WglScene extends EventedType {
+  /**
+   * Appends a new child to the scene
+   */
+  appendChild: (child: Element, sendToBack?: boolean) => void;
+
+  /**
+   * Returns current options passed during scene creation.
+   */
+  getOptions: () => WGLSceneOptions;
+
+  /**
+   * Requests the scene to schedule a re-render. If `immediate` is true, then rendering
+   * happens synchronously inside the call;
+   */
+  renderFrame: (immediate?: boolean) => void;
+
+  /**
+   * Returns the root element of the scene. Root element is a tree entry point of all things
+   * that can be rendered on this scene.
+   */
+  getRoot: () => Element;
+
+  /**
+   * Returns four element-array of the WebGL's clear color [r, g, b, a]. Each element is
+   * between `0` and `1`;
+   */
+  getClearColor: () => [number, number, number, number];
+
+  /**
+   * Returns current draw context (thing passed to every element during render loop)
+   */
+  getDrawContext: () => DrawContext
+
+  /**
+   * Get current pixel ratio
+   */
+  getPixelRatio: () => number
+}
+
+
+export default function createScene(canvas: HTMLCanvasElement, options: WGLSceneOptions = {}): WglScene {
   let width: number;
   let height: number;
-  if (!options) options = {};
 
-  var pixelRatio = options.devicePixelRatio || window.devicePixelRatio;
-  var wglContextOptions = options.wglContext;
+  let pixelRatio = options.devicePixelRatio || window.devicePixelRatio;
+  let wglContextOptions = options.wglContextOptions;
 
-  var gl = <WebGLRenderingContext>(
-            canvas.getContext('webgl', wglContextOptions) || 
-            canvas.getContext('experimental-webgl', wglContextOptions)
-          );
+  let gl = (canvas.getContext('webgl', wglContextOptions) || 
+    canvas.getContext('experimental-webgl', wglContextOptions)
+  ) as WebGLRenderingContext;
 
   gl.enable(gl.BLEND);
   gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.clearColor(0, 0, 0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT)
 
-  var frameToken = 0;
-  var sceneRoot = new Element();
-  var hasMouseClickListeners = false;
-  var hasMouseMoveListeners = false;
+  let frameToken = 0;
+  let sceneRoot = new Element();
+  let hasMouseClickListeners = false;
+  let hasMouseMoveListeners = false;
 
-  var view = new ViewMatrix();
-  var projection = mat4.create();
-  var inverseProjection = mat4.create();
-  var fov = options.fov === undefined ? Math.PI * 45 / 180 : options.fov;
-  var near = options.near === undefined ? 0.01 : options.near;
-  var far = options.far === undefined ? Infinity : options.far;
+  let view = new ViewMatrix();
+  let projection = mat4.create();
+  let inverseProjection = mat4.create();
+  let fov = options.fov === undefined ? Math.PI * 45 / 180 : options.fov;
+  let near = options.near === undefined ? 0.01 : options.near;
+  let far = options.far === undefined ? Infinity : options.far;
 
-  var drawContext = { 
+  const drawContext: DrawContext = { 
     width: window.innerWidth,
     height: window.innerHeight,
     pixelRatio,
@@ -53,7 +159,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
 
   updateCanvasSize();
 
-  var api = eventify({
+  let api = eventify({
     appendChild,
     getSceneCoordinate,
     getClientCoordinate,
@@ -82,9 +188,11 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
   api.on = trapOn;
 
   sceneRoot.bindScene(api);
+
   let cameraController = (options.camera || createSpaceMapCamera)(api, drawContext);
 
-  var disposeClick;
+  let disposeClick: Function;
+
   listenToEvents();
 
   renderFrame();
@@ -117,7 +225,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     return sceneRoot;
   }
 
-  function setCamera(createCamera) {
+  function setCamera(createCamera: Function) {
     if (cameraController) {
       cameraController.dispose();
     }
@@ -132,7 +240,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     return sceneRoot.model;
   }
 
-  function setClearColor(r, g, b, a) {
+  function setClearColor(r: number, g: number, b: number, a: number) {
     gl.clearColor(r, g, b, a)
   }
 
@@ -143,7 +251,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
 
   function listenToEvents() {
     canvas.addEventListener('mousemove', onMouseMove);
-    disposeClick = onClap(canvas, onMouseClick, this);
+    disposeClick = onClap(canvas, onMouseClick);
     window.addEventListener('resize', onResize, true);
   }
 
@@ -189,7 +297,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     renderFrame();
   }
 
-  function onMouseClick(e) {
+  function onMouseClick(e: MouseEvent | Touch) {
     if (!hasMouseClickListeners) return;
     var p = getSceneCoordinate(e.clientX, e.clientY);
     if (!p) return; // need to zoom in!
@@ -201,7 +309,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     })
   }
 
-  function onMouseMove(e) {
+  function onMouseMove(e: MouseEvent) {
     if (!hasMouseMoveListeners) return;
 
     var p = getSceneCoordinate(e.clientX, e.clientY);
@@ -215,7 +323,7 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     });
   }
 
-  function getSceneCoordinate(clientX, clientY) {
+  function getSceneCoordinate(clientX: number, clientY: number) {
     // TODO: This is not optimized by any means.
     var dpr = api.getPixelRatio();
     let clipSpaceX = (dpr * clientX / width) * 2 - 1;
@@ -226,13 +334,10 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     mx[0] /= mx[3]; mx[1] /= mx[3]; mx[2] /= mx[3]; mx[3] /= mx[3];
     vec4.transformMat4(mx, mx, view.cameraWorld);
 
-    // vec3.sub(mx, mx, view.position);
-    mx[0] /= mx[3]; mx[1] /= mx[3]; mx[2] /= mx[3]; mx[3] /= mx[3];
-    mx[0] -= view.position[0]; mx[1] -= view.position[1]; mx[2] -= view.position[2];
-
-    // vec3.normalize(mx, mx);
-    let l = Math.hypot(mx[0], mx[1], mx[2]);
-    mx[0] /= l; mx[1] /= l; mx[2] /= l;
+    vec3.sub(mx, mx, view.position);
+    vec3.normalize(mx, mx);
+    // let l = Math.hypot(mx[0], mx[1], mx[2]);
+    // mx[0] /= l; mx[1] /= l; mx[2] /= l;
     var targetZ = 0;
 
     // TODO: This is likely not going to work for all cases.
@@ -242,8 +347,9 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
 
     }
 
-    vec4.scaleAndAdd(mx, <vec4>view.position, mx, distance)
+    vec4.scaleAndAdd(mx, view.position as vec4, mx, distance)
 
+    // TODO: Return mx?
     return {
       x: mx[0],
       y: mx[1],
@@ -251,11 +357,11 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     }
   }
 
-  function getClientCoordinate(sceneX, sceneY, sceneZ = 0) {
+  function getClientCoordinate(sceneX: number, sceneY: number, sceneZ = 0) {
     // TODO: this is not optimized either.
     var mvp = mat4.multiply(mat4.create(), projection, view.matrix)
     mat4.multiply(mvp, mvp, sceneRoot.model);
-    var coordinate = vec4.transformMat4(<vec4><unknown>[], [sceneX, sceneY, sceneZ, 1], mvp);
+    var coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
 
     var dpr = api.getPixelRatio();
     var x = width * (coordinate[0]/coordinate[3] + 1) * 0.5/dpr;
@@ -263,14 +369,14 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     return {x, y};
   }
 
-  function setViewBox(rect) {
+  function setViewBox(rect: Rectangle) {
     const dpr = drawContext.pixelRatio;
-    const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
+    const nearHeight = dpr * Math.max((rect.top - rect.bottom) / 2, (rect.right - rect.left) / 2);
     const {position, rotation} = drawContext.view;
     position[0] = (rect.left + rect.right)/2;
     position[1] = (rect.top + rect.bottom)/2;
     position[2] = nearHeight / Math.tan(drawContext.fov / 2);
-    quat.set(<vec4><unknown>rotation, 0, 0, 0, 1);
+    quat.set(rotation as unknown as vec4, 0, 0, 0, 1);
 
     drawContext.view.update();
     if (cameraController.setViewBox) {
@@ -297,17 +403,17 @@ export default function createScene(canvas: HTMLCanvasElement, options) {
     gl.clear(gl.COLOR_BUFFER_BIT)
   }
 
-  function appendChild(child, sendToBack) {
+  function appendChild(child: Element, sendToBack = false) {
     sceneRoot.appendChild(child, sendToBack);
     api.fire('append-child', child); // TODO: might need to add support for bubbling?
   }
 
-  function removeChild(child) {
+  function removeChild(child: Element) {
     sceneRoot.removeChild(child)
     api.fire('remove-child', child);
   }
 
-  function trapOn(eventName, callback, context) {
+  function trapOn(eventName: EventKey, callback: EventCallback, context?: any) {
     if (eventName === 'click') hasMouseClickListeners = true;
     if (eventName === 'mousemove') hasMouseMoveListeners = true;
 
