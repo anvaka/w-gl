@@ -1,6 +1,7 @@
 import gl_utils from '../glUtils';
 import createMultiKeyCache from '../lines/createMultiKeyCache';
 import PointCollection from './PointCollection'
+import { DrawContext } from 'src/createScene';
 
 let vertexProgramCache = createMultiKeyCache();
 
@@ -43,14 +44,14 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
     vertexProgramCache.remove(programKey);
   }
 
-  function draw(drawContext) {
+  function draw(drawContext: DrawContext) {
     if (!pointCollection.count) return;
 
     gl.useProgram(vertexProgram);
 
     let data = pointCollection.buffer;
 
-    gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel as Iterable<number>);
+    gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel);
     gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
     gl.uniform3fv(locations.uniforms.uOrigin, drawContext.view.position);
@@ -84,7 +85,7 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
   }
 }
 
-function createCircleTexture(gl) {
+function createCircleTexture(gl: WebGLRenderingContext) {
   var pointTexture = gl.createTexture();
   if (!pointTexture) throw new Error('Failed to create circle texture');
   gl.bindTexture(gl.TEXTURE_2D, pointTexture);
@@ -101,7 +102,7 @@ function createCircleTexture(gl) {
 
   return pointTexture;
 
-  function circle(size) {
+  function circle(size: number) {
     var result = new Uint8Array(size * size * 4);
     var r = (size - 8)/2;
     for (var row = 0; row < size; ++row) {
@@ -123,7 +124,7 @@ function createCircleTexture(gl) {
   }
 }
 
-function blur(src, size) {
+function blur(src: Uint8Array, size: number) {
   var result = new Uint8Array(size * size * 4);
   for (var row = 0; row < size; ++row) {
     for (var col = 0; col < size; ++col) {
@@ -134,7 +135,7 @@ function blur(src, size) {
   return result;
 
 }
-function sample(row, col, depth, src, size) {
+function sample(row: number, col: number, depth: number, src: Uint8Array | number[], size: number) {
   var avg = 0;
   var count = 0;
   for (var y = row - depth; y < row + depth; ++y) {
@@ -150,7 +151,7 @@ function sample(row, col, depth, src, size) {
   return avg/count;
 }
 
-function getShadersCode(allowColors) {
+function getShadersCode(allowColors: boolean) {
   const fragmentShaderCode = `
   precision highp float;
   varying vec4 vColor;
