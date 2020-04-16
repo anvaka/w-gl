@@ -4,15 +4,17 @@ import createKineticAnimation from './animation/createKineticAnimation';
 import createTouchController from './input/createTouchController';
 import createKeyboardController from './input/createKeyboardController';
 import createMouseController from './input/createMouseController'
+import { WglScene } from './createScene';
 
-export default function createSpaceMapCamera(scene, drawContext) {
+export default function createSpaceMapCamera(scene: WglScene) {
+  const drawContext = scene.getDrawContext();
   let view = drawContext.view;
   let rotationSpeed = Math.PI * 2;
   let inclinationSpeed = Math.PI * 1.618;
 
   let sceneOptions = scene.getOptions() || {};
   let allowRotation =
-    sceneOptions.allowRotation === undefined ? true : !!scene.allowRotation;
+    sceneOptions.allowRotation === undefined ? true : !!sceneOptions.allowRotation;
 
   let r = 1;
   // angle of rotation around Y axis, tracked from axis X to axis Z
@@ -78,7 +80,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     mouseController.dispose();
   }
 
-  function getZoomPlaneIntersection(clientX, clientY) {
+  function getZoomPlaneIntersection(clientX: number, clientY: number) {
     let viewPoint = scene.getSceneCoordinate(clientX, clientY);
     let spare: vec3 = [0, 0, 0];
     let ray = vec3.sub(spare, [viewPoint.x, viewPoint.y, viewPoint.z], cameraPosition);
@@ -95,12 +97,12 @@ export default function createSpaceMapCamera(scene, drawContext) {
     }
   }
 
-  function rotateByAngle(angleChange, thetaChange) {
+  function rotateByAngle(angleChange: number, thetaChange: number) {
     phi = clamp(phi + angleChange, minPhi, maxPhi);
     theta = clamp(theta + thetaChange, minTheta, maxTheta);
   }
 
-  function rotateByAbsoluteOffset(dx, dy) {
+  function rotateByAbsoluteOffset(dx: number, dy: number) {
     if (!allowRotation) return;
 
     let ar = drawContext.width / drawContext.height;
@@ -112,7 +114,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     phi = clamp(phi, minPhi, maxPhi);
   }
 
-  function panByAbsoluteOffset(dx, dy) {
+  function panByAbsoluteOffset(dx: number, dy: number) {
     let ar = drawContext.width / drawContext.height;
     // the idea behind this formula is this. We turn dx and dy to be
     // in a range from [0..1] (as a ratio of the screen width or height),
@@ -127,8 +129,11 @@ export default function createSpaceMapCamera(scene, drawContext) {
     moveCenterBy(x, -y); // WebGL Y is not the same as typical DOM Y.
   }
 
-  function zoomToClientCoordinates(clientX, clientY, scaleFactor, shouldAnimate) {
+  function zoomToClientCoordinates(clientX: number, clientY: number, scaleFactor: number, shouldAnimate: any) {
     let p = getZoomPlaneIntersection(clientX, clientY);
+    if (!p) {
+      return;
+    }
     let dx = p[0] - centerPointPosition[0];
     let dy = p[1] - centerPointPosition[1];
 
@@ -153,7 +158,7 @@ export default function createSpaceMapCamera(scene, drawContext) {
     }
   }
 
-  function moveCenterBy(dx, dy) {
+  function moveCenterBy(dx: number, dy: number) {
     let cPhi = Math.cos(phi);
     let sPhi = Math.sin(phi);
     centerPointPosition[0] += cPhi * dy + sPhi * dx;
@@ -176,18 +181,18 @@ export default function createSpaceMapCamera(scene, drawContext) {
     };
   }
 
-  function setCenterRotation(new_phi, new_theta) {
+  function setCenterRotation(new_phi: number, new_theta: number) {
     theta = clamp(new_theta, minTheta, maxTheta);
     phi = clamp(new_phi, minPhi, maxPhi);
     redraw();
   }
 
-  function setCenterPosition(x, y, z) {
+  function setCenterPosition(x: number, y: number, z: number) {
     vec3.set(centerPointPosition, x, y, z);
     redraw();
   }
 
-  function zoomCenterByScaleFactor(scaleFactor, dx, dy) {
+  function zoomCenterByScaleFactor(scaleFactor: number, dx: number, dy: number) {
     // `scaleFactor` defines whether we shrink the radius by multiplying it by something < 1
     // or increase it by multiplying by something > 1.
     r *= 1 - scaleFactor;
@@ -242,20 +247,20 @@ export default function createSpaceMapCamera(scene, drawContext) {
   }
 }
 
-function getSpherical(r, theta, phi): vec3 {
+function getSpherical(r: number, theta: number, phi: number): vec3 {
   let z = r * Math.cos(theta);
   let x = r * Math.sin(theta) * Math.cos(phi);
   let y = r * Math.sin(theta) * Math.sin(phi);
   return [x, y, z];
 }
 
-function clamp(v, min, max) {
+function clamp(v: number, min: number, max: number) {
   if (v < min) v = min;
   if (v > max) v = max;
   return v;
 }
 
-function option(value, fallback) {
+function option(value: number | undefined, fallback: number) {
   if (value === undefined) return fallback;
   return value;
 }

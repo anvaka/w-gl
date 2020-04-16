@@ -17,9 +17,12 @@ export default function onClap(element: Element, callback: ClapHandler, ctx?: an
   var touchStartTime = Date.now();
   let startPos: Point;
 
+  // @ts-ignore
   element.addEventListener('click', invokeHandler as ClapHandler, {passive: false})
 
+  // @ts-ignore
   element.addEventListener('touchend', handleTouchEnd, {passive: false})
+  // @ts-ignore
   element.addEventListener('touchstart', handleTouchStart, {passive: false})
 
   return disposePrevHandler;
@@ -57,12 +60,16 @@ export default function onClap(element: Element, callback: ClapHandler, ctx?: an
   }
 
   function disposePrevHandler() {
+    // @ts-ignore
     element.removeEventListener('click', invokeHandler as ClapHandler)
+    // @ts-ignore
     element.removeEventListener('touchend', handleTouchEnd)
+    // @ts-ignore
     element.removeEventListener('touchstart', handleTouchStart)
   }
 
   function invokeHandler(e: MouseEvent | Touch) {
+    // @ts-ignore
     callback.call(ctx, e)
   }
 }

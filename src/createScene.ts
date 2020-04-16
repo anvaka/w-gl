@@ -31,6 +31,37 @@ type WGLSceneOptions = {
   devicePixelRatio?: number;
 
   /**
+   * Indicates whether user can rotate the scene (either with an `alt` key or with touch/keyboard)
+   * 
+   * `true` by default.
+   */
+  allowRotation?: boolean;
+
+  /**
+   * The smallest angle of rotation around Y axis, tracked from axis X to axis Z.
+   * 
+   * `-Infinity` by default;
+   */
+  minPhi?: number;
+
+  /**
+   * The largest angle of rotation around Y axis, tracked from axis X to axis Z.
+   * 
+   * `Infinity` by default;
+   */
+  maxPhi?: number;
+
+  /**
+   * The smallest camera inclination angle in radians. (Angle above Oxz plane)
+   */
+  minTheta?: number;
+
+  /**
+   * The largest camera inclination angle in radians. (Angle above Oxz plane)
+   */
+  maxTheta?: number;
+
+  /**
    * Size of the scene;
    */
   size?: Size;
@@ -76,8 +107,20 @@ export interface DrawContext {
   center: vec3;
 }
 
+export interface SceneCoordinate {
+  x: number
+  y: number
+  z: number
+}
+
 
 export interface WglScene extends EventedType {
+  /**
+   * Given `clientX` and `clientY` of a mouse coordinate, return corresponding coordinate
+   * in the rendered world.
+   */
+  getSceneCoordinate(clientX: number, clientY: number): SceneCoordinate;
+
   /**
    * Appends a new child to the scene
    */
@@ -115,6 +158,11 @@ export interface WglScene extends EventedType {
    * Get current pixel ratio
    */
   getPixelRatio: () => number
+
+  /**
+   * Returns rendering context.
+   */
+  getGL: () => WebGLRenderingContext
 }
 
 

@@ -42,7 +42,7 @@ const INCLINE = 3; // Locked to inclination.
  * - Should we change incline with this gesture?
  */
 export class MultiTouchState {
-  allowRotation: any;
+  allowRotation: boolean;
   state: number;
   canRotate: boolean;
   canScale: boolean;
@@ -51,7 +51,7 @@ export class MultiTouchState {
   second: any;
   stateChanged: boolean;
 
-  constructor(allowRotation) {
+  constructor(allowRotation: boolean) {
     this.allowRotation = allowRotation;
     this.state = UNKNOWN;
     this.canRotate = false;
@@ -59,6 +59,7 @@ export class MultiTouchState {
     this.canIncline = false;
     this.first = undefined;
     this.second = undefined;
+    this.stateChanged = false;
   }
 
   reset() {

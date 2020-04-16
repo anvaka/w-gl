@@ -8,6 +8,7 @@
     "allowJs": false,
     "noImplicitAny": false,
     "moduleResolution": "node",
+    "strict": true,
     "typeRoots": [
       "node_modules/@types",
       "types"
