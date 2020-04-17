@@ -12,7 +12,15 @@ const zAxis = [0, 0, 1];
 export default class ViewMatrix {
   matrix: mat4;
   cameraWorld: mat4;
+
+  /**
+   * Camera position in the world
+   */
   position: vec3;
+
+  /**
+   * Camera rotation in the world
+   */
   rotation: quat;
 
   constructor(viewMatrix?: mat4) {
