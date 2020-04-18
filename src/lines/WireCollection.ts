@@ -4,6 +4,7 @@ import makeThickWireProgram from './makeThickWireProgram';
 import WireAccessor from './WireAccessor';
 import Color from '../Color';
 import { ColorPoint, Line } from 'src/global';
+import { DrawContext } from 'src/createScene';
 
 export interface WireCollectionOptions {
   allowColors?: boolean
@@ -12,21 +13,23 @@ export interface WireCollectionOptions {
 }
 
 /**
- * Unlike lines, wires do not have width, and are always 1px wide, regardless
- * of resolution.
+ * Collection of lines. TODO: I think I should rename this to LineCollection
  */
 export default class WireCollection extends Element {
-  allowColors: boolean;
-  is3D: boolean;
-  itemsPerLine: number;
+  readonly allowColors: boolean;
+  readonly is3D: boolean;
+  readonly itemsPerLine: number;
   capacity: number;
   count: number;
   color: Color;
-  _program: any;
+  /**
+   * uniform width of the line.
+   */
+  width: number;
   buffer: ArrayBuffer;
   positions: Float32Array; // Note: this type may not be enough sometimes.
-  width: number;
   colors: Uint32Array | null;
+  private _program: any;
 
   constructor(capacity: number, options: WireCollectionOptions) {
     super();
@@ -55,7 +58,7 @@ export default class WireCollection extends Element {
     }
   }
 
-  draw(gl, drawContext) {
+  draw(gl: WebGLRenderingContext, drawContext: DrawContext) {
     if (!this._program) {
       this._program = isWidthForThickWire(this.width) ? makeThickWireProgram(gl, this) : makeWireProgram(gl, this);
     }

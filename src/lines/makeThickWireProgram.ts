@@ -1,14 +1,16 @@
 import gl_utils from '../glUtils';
 import createMultiKeyCache from './createMultiKeyCache';
 import makeWireProgram from './makeWireProgram';
+import WireCollection from './WireCollection';
+import { DrawContext } from 'src/createScene';
 
 let lineProgramCache = createMultiKeyCache();
 
-export default function makeThickWireProgram(gl, wireCollection) {
+export default function makeThickWireProgram(gl: WebGLRenderingContext, wireCollection: WireCollection) {
   let allowWidth = Number.isFinite(wireCollection.width) && 
     wireCollection.width > 0 && wireCollection.width !== 1;
 
-  let gle;
+  let gle: ANGLE_instanced_arrays;
   if (allowWidth) {
     gle = gl.getExtension('ANGLE_instanced_arrays');
     if (!gle) {
@@ -70,7 +72,7 @@ export default function makeThickWireProgram(gl, wireCollection) {
     lineProgramCache.remove(programKey);
   }
 
-  function draw(drawContext) {
+  function draw(drawContext: DrawContext) {
     if (wireCollection.count === 0) return;
 
     let data = wireCollection.buffer;
@@ -118,8 +120,11 @@ export default function makeThickWireProgram(gl, wireCollection) {
       gl.vertexAttribPointer(locations.attributes.aTo, lineSize, gl.FLOAT, false, lineStride, lineSize * 4)
       gle.vertexAttribDivisorANGLE(locations.attributes.aTo, 1);
     }
+
+    // Now that everything is setup - render!
     gle.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, wireCollection.count);
 
+    // Don't forget to clean up after we rendered:
     gle.vertexAttribDivisorANGLE(locations.attributes.aFrom, 0);
     gle.vertexAttribDivisorANGLE(locations.attributes.aTo, 0);
     gle.vertexAttribDivisorANGLE(locations.attributes.aFromColor, 0);
@@ -127,7 +132,7 @@ export default function makeThickWireProgram(gl, wireCollection) {
   }
 }
 
-function getShadersCode(allowColors) {
+function getShadersCode(allowColors: boolean) {
   return { 
     vert: `attribute vec3 aPosition, aFrom, aTo;
     varying vec4 vColor;
