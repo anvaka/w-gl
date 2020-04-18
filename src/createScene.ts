@@ -354,6 +354,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
       originalEvent: e,
       x: p.x,
       y: p.y,
+      z: p.z
     })
   }
 
