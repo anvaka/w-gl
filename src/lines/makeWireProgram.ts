@@ -1,9 +1,11 @@
 import gl_utils from '../glUtils';
 import createMultiKeyCache from './createMultiKeyCache';
+import { DrawContext } from 'src/createScene';
+import WireCollection from './WireCollection';
 
 let lineProgramCache = createMultiKeyCache();
 
-export default function makeWireProgram(gl, wireCollection) {
+export default function makeWireProgram(gl: WebGLRenderingContext, wireCollection: WireCollection) {
   let allowColors = !!wireCollection.allowColors;
   let programKey = [allowColors, gl];
   let lineProgram = lineProgramCache.get(programKey)
@@ -36,7 +38,7 @@ export default function makeWireProgram(gl, wireCollection) {
     lineProgramCache.remove(programKey);
   }
 
-  function draw(drawContext) {
+  function draw(drawContext: DrawContext) {
     if (wireCollection.count === 0) return;
 
     let data = wireCollection.buffer;
@@ -84,7 +86,7 @@ export default function makeWireProgram(gl, wireCollection) {
   }
 }
 
-function getShadersCode(allowColors) {
+function getShadersCode(allowColors: boolean) {
   return { 
     vert:   `attribute vec3 aPosition;
   varying vec4 vColor;
