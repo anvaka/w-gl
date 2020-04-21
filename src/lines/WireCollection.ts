@@ -29,6 +29,7 @@ export default class WireCollection extends Element {
   buffer: ArrayBuffer;
   positions: Float32Array; // Note: this type may not be enough sometimes.
   colors: Uint32Array | null;
+  isDirtyBuffer: boolean;
   private _program: any;
 
   constructor(capacity: number, options: WireCollectionOptions) {

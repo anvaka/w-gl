@@ -1,20 +1,23 @@
+import WireCollection from "./WireCollection";
+import { ColorPoint } from "src/global";
+
 /**
  * Wire accessor provides access to the buffer that stores wires.
  * 
  * Wires are "lines" with 1.0 width.
  */
 export default class WireAccessor {
-  offset: any;
-  _wire: any;
+  offset: number;
+  _wire: WireCollection;
   update: (from: any, to: any) => void;
 
-  constructor(wireCollection, offset) {
+  constructor(wireCollection: WireCollection, offset: number) {
     this.offset = offset;
     this._wire = wireCollection;
     this.update = wireCollection.is3D ? this.update3D : this.update2D;
   }
 
-  update2D(from, to) {
+  update2D(from: ColorPoint, to: ColorPoint) {
     this._wire.isDirtyBuffer = true;
     var positions = this._wire.positions;
     var offset = this.offset;
@@ -35,7 +38,7 @@ export default class WireAccessor {
     }
   }
 
-  update3D(from, to) {
+  update3D(from: ColorPoint, to: ColorPoint) {
     this._wire.isDirtyBuffer = true;
     var positions = this._wire.positions;
     var offset = this.offset;

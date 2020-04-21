@@ -9,7 +9,15 @@ import { ColorPoint } from 'src/global';
 export default class PointCollection extends Element {
   is3D: boolean;
   allowColors: boolean;
+
+  /**
+   * Allocated buffer capacity
+   */
   capacity: number;
+
+  /**
+   * Total number of points in the collection that should be rendered.
+   */
   count: number;
   color: Color;
   buffer: ArrayBuffer;
