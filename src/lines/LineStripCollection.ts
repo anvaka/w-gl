@@ -22,7 +22,7 @@ export default class LineStripCollection extends Element {
   positions: Float32Array;
   colors: Uint32Array | null;
 
-  constructor(capacity, options) {
+  constructor(capacity: number, options) {
     super();
 
     let bytesPerElement = 4;

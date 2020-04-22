@@ -6,6 +6,18 @@ import PointAccessor from './PointAccessor';
 import { DrawContext } from 'src/createScene';
 import { ColorPoint } from 'src/global';
 
+interface PointCollectionOptions {
+  /**
+   * If true, then each point has three dimensions (requires more memory)
+   */
+  is3D?: boolean
+
+  /**
+   * If true, then colors can be set on each point (4 byte per point)
+   */
+  allowColors?: boolean
+}
+
 export default class PointCollection extends Element {
   is3D: boolean;
   allowColors: boolean;
@@ -27,7 +39,7 @@ export default class PointCollection extends Element {
   itemsPerPoint: number;
   _program: any;
 
-  constructor(capacity: number, options) {
+  constructor(capacity: number, options: PointCollectionOptions) {
     if (capacity === undefined) {
       throw new Error('Point capacity should be defined');
     }
