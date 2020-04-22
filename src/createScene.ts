@@ -3,7 +3,7 @@ import eventify, { EventedType } from 'ngraph.events';
 import Element from './Element';
 import onClap from './clap';
 import {mat4, vec4, vec3, quat} from 'gl-matrix';
-import {setMatrixArrayType} from 'gl-matrix/esm/common';
+import {setMatrixArrayType} from 'gl-matrix/dist/esm/common';
 import ViewMatrix from './ViewMatrix';
 import createSpaceMapCamera from './createSpaceMapCamera';
 import {EventCallback, EventKey} from 'ngraph.events';

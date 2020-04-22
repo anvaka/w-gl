@@ -1,5 +1,6 @@
 import WireCollection from "./WireCollection";
 import { ColorPoint } from "src/global";
+import Color from "src/Color";
 
 /**
  * Wire accessor provides access to the buffer that stores wires.
@@ -27,14 +28,14 @@ export default class WireAccessor {
     offset += 2;
     var hasColor = this._wire.allowColors;
     if (hasColor) {
-      if (from.color !== undefined) this._wire.colors[offset] = from.color;
+      if (from.color !== undefined) this._wire.colors![offset] = from.color;
       offset += 1;
     }
 
     positions[offset + 0] = to.x
     positions[offset + 1] = to.y
-    if (hasColor && to.color) {
-      this._wire.colors[offset + 2] = to.color;
+    if (hasColor && to.color !== undefined) {
+      this._wire.colors![offset + 2] = to.color;
     }
   }
 
@@ -49,9 +50,8 @@ export default class WireAccessor {
     offset += 3;
     var hasColor = this._wire.allowColors;
     if (hasColor) {
-      if (from.color !== undefined) this._wire.colors[offset] = from.color;
-      //else this._wire.colors[offset] = toHex(this._wire.color)
-      else this._wire.colors[offset] = toHex(this._wire.color)
+      if (from.color !== undefined) this._wire.colors![offset] = from.color;
+      else this._wire.colors![offset] = toHex(this._wire.color)
       offset += 1;
     }
 
@@ -59,13 +59,13 @@ export default class WireAccessor {
     positions[offset + 1] = to.y
     positions[offset + 2] = to.z || 0
     if (hasColor) {
-      if (to.color) this._wire.colors[offset + 3] = to.color;
-      else this._wire.colors[offset + 3] = toHex(this._wire.color)
+      if (to.color !== undefined) this._wire.colors![offset + 3] = to.color;
+      else this._wire.colors![offset + 3] = toHex(this._wire.color)
     }
   }
 }
 
-function toHex(color) {
+function toHex(color: Color) {
   let r = Math.round(color.r * 255);
   let g = Math.round(color.g * 255);
   let b = Math.round(color.b * 255);

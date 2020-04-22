@@ -57,6 +57,7 @@ export default class WireCollection extends Element {
     } else {
       this.colors = null;
     }
+    this.isDirtyBuffer = true;
   }
 
   draw(gl: WebGLRenderingContext, drawContext: DrawContext) {

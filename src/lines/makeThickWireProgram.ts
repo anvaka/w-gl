@@ -12,7 +12,7 @@ export default function makeThickWireProgram(gl: WebGLRenderingContext, wireColl
 
   let gle: ANGLE_instanced_arrays;
   if (allowWidth) {
-    gle = gl.getExtension('ANGLE_instanced_arrays');
+    gle = gl.getExtension('ANGLE_instanced_arrays') as ANGLE_instanced_arrays;
     if (!gle) {
       console.error('ANGLE_instanced_arrays is not supported, thick lines are not possible')
       return makeWireProgram(gl, wireCollection);
