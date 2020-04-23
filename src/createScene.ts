@@ -70,7 +70,7 @@ type WGLSceneOptions = {
    * WebGL context options. 
    * @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
    */
-  wglContextOptions?: any
+  wglContextOptions?: WebGLContextAttributes
 
   /**
    * Field of view angle defined in radians.
