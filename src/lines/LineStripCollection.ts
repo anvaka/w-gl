@@ -4,6 +4,11 @@ import makeLineStripProgram from './makeLineStripProgram';
 import {DrawContext} from 'src/createScene';
 import {ColorPoint} from 'src/global';
 
+export interface LineStripOptions {
+  allowColors?: boolean;
+  is3D?: boolean;
+}
+
 /**
  * Line strip is implemented as a cyclic buffer. Each subsequent element of the
  * buffer is connected with a line to the previous element of the buffer.
@@ -14,15 +19,16 @@ export default class LineStripCollection extends Element {
   allowColors: boolean;
   is3D: boolean;
   itemsPerLine: number;
-  capacity: any;
+  capacity: number;
   nextElementIndex: number;
-  _program: any;
   color: Color;
   buffer: ArrayBuffer;
   positions: Float32Array;
   colors: Uint32Array | null;
 
-  constructor(capacity: number, options) {
+  private _program: any;
+
+  constructor(capacity: number, options?: LineStripOptions) {
     super();
 
     let bytesPerElement = 4;
