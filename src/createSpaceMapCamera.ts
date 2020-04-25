@@ -42,6 +42,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
     dispose,
     setViewBox,
     panByAbsoluteOffset,
+    slideCenterUpDown,
     rotateByAngle,
     rotateByAbsoluteOffset,
     zoomCenterByScaleFactor,
@@ -49,7 +50,8 @@ export default function createSpaceMapCamera(scene: WglScene) {
     redraw,
     allowRotation,
     rotateAnimation,
-    panAnimation
+    panAnimation,
+    getCenter,
   };
 
   let inputTarget = drawContext.canvas;
@@ -61,6 +63,10 @@ export default function createSpaceMapCamera(scene: WglScene) {
   redraw();
 
   return api;
+
+  function getCenter() {
+    return centerPointPosition;
+  }
 
   function setViewBox() {
     cameraPosition = view.position;
@@ -163,6 +169,10 @@ export default function createSpaceMapCamera(scene: WglScene) {
     let sPhi = Math.sin(phi);
     centerPointPosition[0] += cPhi * dy + sPhi * dx;
     centerPointPosition[1] += sPhi * dy - cPhi * dx;
+  }
+
+  function slideCenterUpDown(dz: number) {
+    centerPointPosition[2] += dz * r * 0.001;
   }
 
   function getCenterPosition() {

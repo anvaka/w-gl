@@ -1,8 +1,8 @@
-export default function createKeyboardController(inputTarget, camera) {
+export default function createKeyboardController(inputTarget: HTMLElement, camera) {
   let frameHandle = 0;
 
-  let vx = 0, vy = 0; // velocity of the panning
-  let dx = 0, dy = 0; // actual offset of the panning
+  let vx = 0, vy = 0, vz = 0; // velocity of the panning
+  let dx = 0, dy = 0, dz = 0; // actual offset of the panning
   let dPhi = 0, vPhi = 0; // rotation 
   let dRadius = 0, vRadius = 0; // radius
   let dIncline = 0, vIncline = 0; // inclination
@@ -13,7 +13,7 @@ export default function createKeyboardController(inputTarget, camera) {
 
   function listenToEvents() {
     if (!inputTarget.getAttribute('tabindex')) {
-      inputTarget.setAttribute('tabindex', 0);
+      inputTarget.setAttribute('tabindex', '0');
     }
     inputTarget.addEventListener('keydown', handleKeyDown);
     inputTarget.addEventListener('keyup', handleKeyUp);
@@ -32,8 +32,13 @@ export default function createKeyboardController(inputTarget, camera) {
 
     dx = clampTo(dx * dampFactor + vx, 0.5, 0);
     dy = clampTo(dy * dampFactor + vy, 0.5, 0);
+    dz = clampTo(dz * dampFactor + vz, 0.5, 0);
     if (dx || dy) {
       camera.panByAbsoluteOffset(dx, dy);
+      needRedraw = true;
+    }
+    if (dz) {
+      camera.slideCenterUpDown(dz);
       needRedraw = true;
     }
 
@@ -62,15 +67,15 @@ export default function createKeyboardController(inputTarget, camera) {
     frameHandle = requestAnimationFrame(frame);
   }
 
-  function handleKeyDown(e) {
+  function handleKeyDown(e: KeyboardEvent) {
     onKey(e, 1);
   }
 
-  function handleKeyUp(e) {
+  function handleKeyUp(e: KeyboardEvent) {
     onKey(e, 0);
   }
 
-  function onKey(e, isDown) {
+  function onKey(e: KeyboardEvent, isDown: number) {
     if (isModifierKey(e)) return;
 
     // TODO: implement plane move on the z up/down?
@@ -108,6 +113,12 @@ export default function createKeyboardController(inputTarget, camera) {
       case 40: // ↓
       case 83: // d
         vy = -isDown;
+        break;
+      case 71: // g
+        vz = -isDown;
+        break;
+      case 84: // t
+        vz = isDown;
         break;
     }
     processNextInput();
