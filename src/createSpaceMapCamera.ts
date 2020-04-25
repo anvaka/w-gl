@@ -51,7 +51,9 @@ export default function createSpaceMapCamera(scene: WglScene) {
     allowRotation,
     rotateAnimation,
     panAnimation,
+
     getCenter,
+    getRadius,
   };
 
   let inputTarget = drawContext.canvas;
@@ -66,6 +68,10 @@ export default function createSpaceMapCamera(scene: WglScene) {
 
   function getCenter() {
     return centerPointPosition;
+  }
+
+  function getRadius() {
+    return r;
   }
 
   function setViewBox() {
