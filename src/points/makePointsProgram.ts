@@ -21,9 +21,26 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
 
   let locations = gl_utils.getLocations(gl, vertexProgram);
 
+  let gle = gl.getExtension('ANGLE_instanced_arrays')!;
+  if (!gle) {
+    // Not sure if this is going to be an error, given instancing is widely supported. But
+    // If you get this error please ping me so that we can find a fallback solution
+    throw new Error('PointCollection requires instancing. Please ping @anvaka so that we can add fallback');
+  }
+
   let buffer = gl.createBuffer();
   if (!buffer) throw new Error('failed to create a nodesBuffer');
-  let pointTexture = createCircleTexture(gl);
+
+  const instanceBuffer = gl.createBuffer();
+  const instanceBufferValues = new Float32Array([
+    -0.5, -0.5,
+    -0.5,  0.5,
+     0.5,  0.5,
+
+     0.5,  0.5,
+     0.5, -0.5,
+    -0.5, -0.5,
+  ]);
 
   let positionSize = pointCollection.is3D ? 3 : 2;
   let sizeOffset = positionSize * 4;
@@ -39,7 +56,6 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
   function dispose() {
     // TODO: Do I need gl.deleteBuffer(buffer);?
     gl.deleteProgram(vertexProgram);
-    gl.deleteTexture(pointTexture);
 
     vertexProgramCache.remove(programKey);
   }
@@ -47,6 +63,7 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
   function draw(drawContext: DrawContext) {
     if (!pointCollection.count) return;
 
+    gl.enable(gl.DEPTH_TEST);
     gl.useProgram(vertexProgram);
 
     let data = pointCollection.buffer;
@@ -54,9 +71,13 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel);
     gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
-    gl.uniform3fv(locations.uniforms.uOrigin, drawContext.view.position);
+    gl.uniform2f(locations.uniforms.uResolution, drawContext.width, drawContext.height);
 
-    gl.bindTexture(gl.TEXTURE_2D, pointTexture);
+    gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, instanceBufferValues, gl.STATIC_DRAW);
+
+    gl.enableVertexAttribArray(locations.attributes.aPoint)
+    gl.vertexAttribPointer(locations.attributes.aPoint, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
@@ -81,107 +102,53 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
       gl.uniform4f(locations.uniforms.uColor, color.r, color.g, color.b, color.a);
     }
 
-    gl.drawArrays(gl.POINTS, 0, pointCollection.count);
+    gle.vertexAttribDivisorANGLE(locations.attributes.aPoint, 0);
+    gle.vertexAttribDivisorANGLE(locations.attributes.aPosition, 1);
+    gle.vertexAttribDivisorANGLE(locations.attributes.aPointSize, 1);
+    gle.vertexAttribDivisorANGLE(locations.attributes.aColor, 1);
+
+    gle.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, pointCollection.count);
+
+    gle.vertexAttribDivisorANGLE(locations.attributes.aPosition, 0);
+    gle.vertexAttribDivisorANGLE(locations.attributes.aPoint, 0);
+    gle.vertexAttribDivisorANGLE(locations.attributes.aPointSize, 0);
+    gle.vertexAttribDivisorANGLE(locations.attributes.aColor, 0);
+    gl.disable(gl.DEPTH_TEST);
   }
-}
-
-function createCircleTexture(gl: WebGLRenderingContext) {
-  var pointTexture = gl.createTexture();
-  if (!pointTexture) throw new Error('Failed to create circle texture');
-  gl.bindTexture(gl.TEXTURE_2D, pointTexture);
-
-  var size = 64
-  var image = circle(size);
-
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.generateMipmap(gl.TEXTURE_2D);
-
-  return pointTexture;
-
-  function circle(size: number) {
-    var result = new Uint8Array(size * size * 4);
-    var r = (size - 8)/2;
-    for (var row = 0; row < size; ++row) {
-      var offset = row * size;
-      for (var col = 0; col < size; ++col) {
-        var rgbaCoord = (offset + col) * 4;
-        var cy = row - r;
-        var cx = col - r;
-        var distToCenter = Math.sqrt(cx * cx + cy * cy);
-        if (distToCenter < r) {
-          var ratio = (1 - distToCenter/r);
-          result[rgbaCoord + 3] = ratio > 0.3 ? 0xff : 0xff * ratio;
-        } else {
-          result[rgbaCoord + 3] = 0x00;
-        }
-      }
-    }
-    return blur(result, size)
-  }
-}
-
-function blur(src: Uint8Array, size: number) {
-  var result = new Uint8Array(size * size * 4);
-  for (var row = 0; row < size; ++row) {
-    for (var col = 0; col < size; ++col) {
-      result[(row * size + col) * 4 + 3] = sample(row, col, 3, src, size);
-    }
-  }
-
-  return result;
-
-}
-function sample(row: number, col: number, depth: number, src: Uint8Array | number[], size: number) {
-  var avg = 0;
-  var count = 0;
-  for (var y = row - depth; y < row + depth; ++y) {
-    if (y < 0 || y >= size) continue;
-    for (var x = col - depth; x < col + depth; ++x) {
-      if (x < 0 || x >= size) continue;
-
-      avg += src[(y * size + x) * 4 + 3];
-      count += 1;
-    }
-  }
-
-  return avg/count;
 }
 
 function getShadersCode(allowColors: boolean) {
   const fragmentShaderCode = `
   precision highp float;
   varying vec4 vColor;
-  uniform sampler2D texture;
+  uniform vec2 uResolution;
+  varying vec3 vPosition;
 
   void main() {
-    vec4 tColor = texture2D(texture, gl_PointCoord);
-    gl_FragColor = vec4(vColor.rgb, tColor.a);
+    float dist = length(vPosition);
+
+    if (dist >= 0.5) {discard;}
+    gl_FragColor = vColor;
   }
   `;
 
-  const vertexShaderCode = `attribute float aPointSize;
-  attribute vec3 aPosition;
-  varying vec4 vColor;
-  ${allowColors ? 'attribute vec4 aColor;' : ''}
+  const vertexShaderCode = `
   uniform vec4 uColor;
   uniform mat4 projectionMatrix;
   uniform mat4 uModel;
   uniform mat4 uView;
-  uniform vec3 uOrigin;
+
+  attribute float aPointSize;
+  attribute vec3 aPosition;
+  attribute vec3 aPoint;
+  ${allowColors ? 'attribute vec4 aColor;' : ''}
+
+  varying vec4 vColor;
+  varying vec3 vPosition;
 
   void main() {
-    mat4 modelView = uView * uModel;
-    vec4 mvPosition = modelView * vec4( aPosition, 1.0 );
-
-    vec4 glPos = projectionMatrix * mvPosition;
-    gl_Position = glPos;
-    vec4 glOrigin = modelView * vec4(uOrigin, 1.0);
-    float cameraDist = length( glPos.xyz - glOrigin.xyz );
-    gl_PointSize = max(aPointSize * 128./cameraDist, 2.);
+    vPosition = aPoint;
+    gl_Position = projectionMatrix * uView * uModel * vec4( aPosition + aPoint * aPointSize, 1.0 );
     vColor = ${allowColors ? 'aColor.abgr' : 'uColor'};
   }
 `;

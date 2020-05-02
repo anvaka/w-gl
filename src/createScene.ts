@@ -188,9 +188,10 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
   ) as WebGLRenderingContext;
 
   gl.enable(gl.BLEND);
+
   gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.clearColor(0, 0, 0, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT)
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
   let frameToken = 0;
   let sceneRoot = new Element();
