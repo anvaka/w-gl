@@ -67,8 +67,6 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
     gl.depthFunc(gl.LEQUAL)
     gl.useProgram(vertexProgram);
 
-    let data = pointCollection.buffer;
-
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel);
     gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
@@ -81,7 +79,7 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
     gl.vertexAttribPointer(locations.attributes.aPoint, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, pointCollection.buffer, gl.DYNAMIC_DRAW);
 
     if (allowColors) {
       gl.enableVertexAttribArray(locations.attributes.aPosition)

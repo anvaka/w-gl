@@ -49,7 +49,7 @@ export default function makeThickWireProgram(gl: WebGLRenderingContext, wireColl
     isThickWire: true,
     draw,
     dispose
-  }
+  };
 
   return api;
 
