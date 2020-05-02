@@ -16,10 +16,24 @@ interface GuidOptions {
    * Cursor color 0xRRGGBBAA
    */
   cursorColor?: number;
+
+  /**
+   * If set to false, the cursor is not rendered
+   */
+  showCursor?: boolean;
+
+  /**
+   * If set to false, the grid is not rendered
+   */
+  showGrid?: boolean;
 }
 
 export default function createGuide(scene: WglScene, options: GuidOptions = {}) {
   let camera = scene.getCamera();
+  const nullElement = {
+      redraw: Function.prototype,
+      dispose: Function.prototype
+    }
 
   // TODO: Move these to options.
   let lineColor = options.lineColor || 0x0bb1b122;
@@ -45,6 +59,7 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
   }
 
   function createGrid(color: number) {
+    if (options.showGrid === false) return nullElement; 
     let count = 32*2;
     let levelUp = new WireCollection(2*(count + 1), {width: 2.5, is3D: true, allowColors: true})
     let levelDown = new WireCollection(2*(count + 1), {width: 1.5, is3D: true, allowColors: true})
@@ -109,6 +124,8 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
   }
 
   function createCursor(color: number) {
+    if (options.showCursor === false) return nullElement; 
+
     let count = 360;
     let center = scene.getDrawContext().center;
     let geometry = new WireCollection(count + 1 , {width: 3, is3D: true, allowColors: true})
