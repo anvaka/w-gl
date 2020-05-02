@@ -64,6 +64,7 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
     if (!pointCollection.count) return;
 
     gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL)
     gl.useProgram(vertexProgram);
 
     let data = pointCollection.buffer;
