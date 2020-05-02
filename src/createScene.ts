@@ -127,6 +127,11 @@ export interface WglScene extends EventedType {
   appendChild: (child: Element, sendToBack?: boolean) => void;
 
   /**
+   * removes a child from scene
+   */
+  removeChild: (child: Element) => void;
+
+  /**
    * Returns current options passed during scene creation.
    */
   getOptions: () => WGLSceneOptions;
@@ -163,6 +168,11 @@ export interface WglScene extends EventedType {
    * Returns rendering context.
    */
   getGL: () => WebGLRenderingContext
+
+  /**
+   * Returns current camera. Don't rely on this method, it is subject to change.
+   */
+  getCamera: () => any
 }
 
 

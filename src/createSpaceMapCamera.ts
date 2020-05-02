@@ -52,7 +52,6 @@ export default function createSpaceMapCamera(scene: WglScene) {
     rotateAnimation,
     panAnimation,
 
-    getCenter,
     getRadius,
   };
 
@@ -66,10 +65,6 @@ export default function createSpaceMapCamera(scene: WglScene) {
 
   return api;
 
-  function getCenter() {
-    return centerPointPosition;
-  }
-
   function getRadius() {
     return r;
   }
@@ -77,7 +72,9 @@ export default function createSpaceMapCamera(scene: WglScene) {
   function setViewBox() {
     cameraPosition = view.position;
     r = Math.hypot(cameraPosition[2]);
-    centerPointPosition = [cameraPosition[0], cameraPosition[1], 0];
+    centerPointPosition[0] = cameraPosition[0];
+    centerPointPosition[1] = cameraPosition[1];
+    centerPointPosition[2] = 0;
 
     theta = clamp(0, minTheta, maxTheta);
     phi = clamp(-Math.PI / 2, minPhi, maxPhi);

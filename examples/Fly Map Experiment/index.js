@@ -1,7 +1,7 @@
 /**
  * Please ignore this. I'm still learning quaternions, and matrices and stuff.
  */
-const {createScene, WireCollection, createGameCamera, createSpaceMapCamera, PointCollection} = window.wgl;
+const {createScene, WireCollection, createGameCamera, createSpaceMapCamera, PointCollection, createGuide} = window.wgl;
 const {mat4, quat, vec3} = glMatrix;
 
 let upCollection = new WireCollection(10, { width: 4 });
@@ -13,7 +13,7 @@ let scene = createScene(document.querySelector('canvas'), {});
 // drawGraph(scene);
 
 
-drawGrid(scene)
+createGuide(scene);
 // scene.appendChild(upCollection)
 let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
 scene.appendChild(someShape1);
