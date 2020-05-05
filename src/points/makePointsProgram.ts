@@ -70,7 +70,6 @@ export default function makePointsProgram(gl: WebGLRenderingContext, pointCollec
     gl.uniformMatrix4fv(locations.uniforms.uModel, false, pointCollection.worldModel);
     gl.uniformMatrix4fv(locations.uniforms.projectionMatrix, false, drawContext.projection);
     gl.uniformMatrix4fv(locations.uniforms.uView, false, drawContext.view.matrix);
-    gl.uniform2f(locations.uniforms.uResolution, drawContext.width, drawContext.height);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, instanceBufferValues, gl.STATIC_DRAW);
@@ -120,7 +119,6 @@ function getShadersCode(allowColors: boolean) {
   const fragmentShaderCode = `
   precision highp float;
   varying vec4 vColor;
-  uniform vec2 uResolution;
   varying vec3 vPosition;
 
   void main() {
