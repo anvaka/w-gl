@@ -1,5 +1,6 @@
 ## todo
 
+* Custom shader collection (current model is super repetitive)
 * Arrows for the lines
 * Text.
 * Polygons
