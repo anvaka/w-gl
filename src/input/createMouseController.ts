@@ -22,7 +22,7 @@ export default function createMouseController(inputTarget, camera) {
     document.removeEventListener('mouseup', onMouseUp);
   }
 
-  function handleMouseDown(e) {
+  function handleMouseDown(e: MouseEvent) {
     let isLeftButton =
       (e.button === 1 && window.event !== null) || e.button === 0;
     if (!isLeftButton) return;
@@ -44,7 +44,7 @@ export default function createMouseController(inputTarget, camera) {
     }
   }
 
-  function onMouseMove(e) {
+  function onMouseMove(e: MouseEvent) {
     let dy = e.clientY - mouseY;
     let dx = e.clientX - mouseX;
 
@@ -70,7 +70,7 @@ export default function createMouseController(inputTarget, camera) {
     }
   }
 
-  function handleDoubleClick(e) {
+  function handleDoubleClick(e: MouseEvent) {
     camera.zoomToClientCoordinates(e.clientX, e.clientY, 0.5, true);
     e.preventDefault();
     e.stopPropagation();
@@ -85,8 +85,7 @@ export default function createMouseController(inputTarget, camera) {
     e.preventDefault();
   }
 
-  function getScaleFactorFromDelta(delta) {
+  function getScaleFactorFromDelta(delta: number) {
     return Math.sign(delta) * Math.min(0.25, Math.abs(delta / 128));
   }
-
 }

@@ -133,8 +133,8 @@ export default function createSpaceMapCamera(scene: WglScene) {
     // is `r * tan(fov/2)`, we now extend it to full length by performing `2 * `
     // and take the ratio in dx and dy scale.
     let fCoefficient = 2 * r * Math.tan(drawContext.fov / 2);
-    let x = (ar * fCoefficient * dx) / window.innerWidth;
-    let y = (fCoefficient * dy) / window.innerHeight;
+    let x = (ar * fCoefficient * dx) / (drawContext.width / drawContext.pixelRatio);
+    let y = (fCoefficient * dy) / (drawContext.height / drawContext.pixelRatio); 
     moveCenterBy(x, -y); // WebGL Y is not the same as typical DOM Y.
   }
 

@@ -385,6 +385,10 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
 
   function getSceneCoordinate(clientX: number, clientY: number) {
     // TODO: This is not optimized by any means.
+    // todo: cache canvas size?
+    let rect = canvas.getBoundingClientRect()
+    clientX -= rect.left;
+    clientY -= rect.top;
     var dpr = api.getPixelRatio();
     let clipSpaceX = (dpr * clientX / width) * 2 - 1;
     let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
