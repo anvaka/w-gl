@@ -136,6 +136,7 @@ export default class Element {
     let childIdx = this.children.indexOf(child);
     if (childIdx > -1) {
       this.children.splice(childIdx, 1);
+      child.bindScene(null);
     }
 
     if (this.scene) this.scene.renderFrame();
