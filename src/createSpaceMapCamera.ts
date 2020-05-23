@@ -255,6 +255,8 @@ export default function createSpaceMapCamera(scene: WglScene) {
     mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
     mat4.getRotation(view.rotation, view.matrix);
     view.update();
+
+    scene.getRoot().scheduleMVPUpdate();
     scene.fire('transform', drawContext);
     scene.renderFrame();
   }

@@ -19,7 +19,17 @@ export default class Element {
    */
   worldModel: mat4;
 
+  /**
+   * Model * view * projection matrix
+   */
+  modelViewProjection: mat4;
+
   worldTransformNeedsUpdate: boolean;
+
+  /**
+   * If true, the modelViewProjection matrix is updated before draw() call
+   */
+  modelViewProjectionNeedsUpdate: boolean;
 
   type: string;
 
@@ -29,7 +39,9 @@ export default class Element {
     this.children = [];
     this.model = mat4.create();
     this.worldModel = mat4.create();
+    this.modelViewProjection = mat4.create();
     this.worldTransformNeedsUpdate = true;
+    this.modelViewProjectionNeedsUpdate = true;
 
     this.type = 'Element';
     this.scene = null;
@@ -150,6 +162,7 @@ export default class Element {
         mat4.copy(this.worldModel, this.model);
       }
 
+      this.modelViewProjectionNeedsUpdate = true;
       this.worldTransformNeedsUpdate = false;
       force = true; // We have to update children now.
     }
@@ -164,12 +177,29 @@ export default class Element {
     return wasDirty;
   }
 
+  scheduleMVPUpdate() {
+    this.modelViewProjectionNeedsUpdate = true;
+    let children = this.children;
+    for (var i = 0; i < children.length; i++ ) {
+       children[i].scheduleMVPUpdate();
+    }
+  }
+
+  updateModelViewProjection(projection: mat4, view: mat4) {
+    if (!this.modelViewProjectionNeedsUpdate) return;
+
+    mat4.multiply(this.modelViewProjection, projection, view);
+    mat4.multiply(this.modelViewProjection, this.modelViewProjection, this.worldModel);
+    this.modelViewProjectionNeedsUpdate = false;
+  }
+
   /**
    * Requests the element to draw itself (and its children)
    */
   draw(gl: WebGLRenderingContext, drawContext: DrawContext) {
     for (var i = 0; i < this.children.length; ++i) {
-      var child = this.children[i];
+      let child = this.children[i];
+      child.updateModelViewProjection(drawContext.projection, drawContext.view.matrix);
       child.draw(gl, drawContext);
     }
   }
