@@ -7,10 +7,88 @@ import FinalCode from "./FinalCode";
 
 export type RenderProgram = {
   /**
+   * This method adds a new vertex to the buffer and returns its id.
+   *
+   * The vertex is a an object, where key names match your `glsl` 
+   * attribute names. For example, imagine you have this vertex shader:
+   * 
+   * ``` glsl
+   * attribute vec3 point;
+   * attribute vec4 color;
+   * 
+   * uniform mat4 modelViewProjection;
+   * varying vec4 vColor
+   * 
+   * void main() {
+   *   gl_Position = modelViewProjection * vec4(point, 0, 1.0);
+   *   vColor = color.abgr;
+   * }
+   * ```
+   * 
+   * From JavaScript side, we can add three vertices like so:
+   * 
+   * ``` js
+   * program.add({color: 0xff0000ff, point: [0, 0, 0]});
+   * program.add({color: 0x00ff00ff, point: [0, 1, 0]});
+   * program.add({color: 0x0000ffff, point: [1, 1, 0]});
+   * ```
+   * 
+   * notice how `color` and `point` match the attributes of the vertex shader.
+   */
+  add: (vertex: Object) => number;
+
+  /**
+   * Similar to `add()`, this method allows to update vertex values.
+   */
+  update: (vertexId: number, vertex: Object) => void;
+
+  /**
+   * Reads a vertex object from the buffer. Note: this method creates a new object
+   * so we don't recommend to use it in a hot path to avoid GC pressure.
+   * 
+   * Example:
+   * 
+   * ``` js
+   * let vertexId = program.add({color: 0xFF00FFFF, point: [1, 1, 1]});
+   * let vertex = program.get(vertexId); 
+   * // vertex is now {color: 0xFF00FFFF, point: [1, 1, 1]}
+   */
+  get: (vertexId: number) => Object;
+
+  /**
+   * Executes WebGL draw() call with given set of uniforms and current
+   * buffer.
+   */
+  draw: (uniforms: Object) => void;
+
+  /**
+   * De-allocates WebGL resources created by this program.
+   */
+  dispose: () => void;
+
+  /**
    * Returns a string that represent javascript code to render program
    */
   getCode: () => FinalCode
 
+  /**
+   * Returns a copy of the used part of the buffer.
+   * 
+   * Note: actual buffer might be larger than returned copy, but we always return
+   * part of the buffer that holds vertex attributes data.
+   */
+  getBuffer: () => ArrayBuffer
+
+  /**
+   * Appends new `buffer` content to the current buffer, starting at `offset` location
+   * (offset is specified in bytes).
+   * 
+   * If current buffer is not big enough to hold appended data, current buffer is
+   * extended to fulfill the request.
+   * 
+   * This method is useful when you want to load persisted buffer (from `getBuffer()`)
+   */
+  appendBuffer: (buffer: Uint8Array, offset: number) => void;
 }
 
 /**
