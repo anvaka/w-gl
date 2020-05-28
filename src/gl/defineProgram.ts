@@ -148,9 +148,9 @@ export type ProgramDefinition = {
 
   /**
    * Collection of attribute overrides. Attribute overrides allow developers to override
-   * default guessed types. For example, a glsl `attribute vec4 color;` will be translate
+   * default guessed types. For example, a glsl `attribute vec4 color;` will be translated
    * to a `Float32Array`, with one 32bit float per color channel. That is not optimal, as the
-   * same information can be fit into a single 32bit uint value. So develope can override
+   * same information can be fit into a single 32bit uint value. So we can override
    * `float32` with 
    * 
    * ``` js
