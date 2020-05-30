@@ -5,6 +5,7 @@ import WireAccessor from './WireAccessor';
 import Color from '../Color';
 import { ColorPoint, Line } from 'src/global';
 import { DrawContext } from 'src/createScene';
+import {mixUint32Color} from '../colorUtils';
 
 export interface WireCollectionOptions {
   allowColors?: boolean
@@ -102,6 +103,13 @@ export default class WireCollection extends Element {
 
     this.count += 1;
     return ui;
+  }
+
+  getLineColor(from?: ColorPoint, to?: ColorPoint) {
+    if (this.allowColors && from && from.color && to && to.color) {
+      return mixUint32Color(from.color, to.color);
+    }
+    return [this.color.r, this.color.g, this.color.b, this.color.a]
   }
 
   forEachLine(callback: (from: ColorPoint, to: ColorPoint) => void) {

@@ -2,8 +2,8 @@ import {mat4, vec4} from 'gl-matrix';
 import createGraph, {NodeId} from 'ngraph.graph';
 import Element from '../Element';
 import { WglScene, DrawContext } from 'src/createScene';
-import WireCollection from 'src/lines/WireCollection';
 import { ColorPoint } from 'src/global';
+import {toHexColor} from '../colorUtils';
 
 
 type StackNode = {
@@ -16,6 +16,14 @@ type ProjectedPoint = {
   y: number,
   isBehind?: boolean
 }
+
+type LineVisitor = (from: ColorPoint, to: ColorPoint) => void;
+
+type LineCollectionTrait = {
+  forEachLine: (visitor: LineVisitor) => void;
+  getLineColor: (from?: ColorPoint, to?: ColorPoint) => number[];
+  width?: number
+} & Element;
 
 /**
  * When exporting a collection of wires we want to limit amount of movement of a pen
@@ -57,7 +65,6 @@ interface SVGExportSettings {
 }
 
 export default function svg(scene: WglScene, settings: SVGExportSettings = {}) {
-  const renderers = initRenderers();
   const sceneRoot = scene.getRoot();
   sceneRoot.updateWorldTransform();
 
@@ -86,12 +93,17 @@ export default function svg(scene: WglScene, settings: SVGExportSettings = {}) {
 
     for (var i = 0; i < children.length; ++i) {
       const child = children[i];
-      const renderer = renderers.get(child.type);
-      if (renderer) renderer(child, context, layerSettings);
+      const lineCollection = getLineRenderTrait(child);
+      if (lineCollection) renderLinesCollection(lineCollection, context, layerSettings);
 
       draw(child.children);
     }
   }
+}
+
+function getLineRenderTrait(child: any): LineCollectionTrait | undefined {
+  if (!child || child['svgInvisible']) return;
+  if (child.forEachLine) return child;
 }
 
 function yes() { return true; }
@@ -127,13 +139,7 @@ function closeDocument(context: SVGRenderingContext, settings: SVGExportSettings
   context.write('</svg>');
 }
 
-function initRenderers() {
-  let renderers = new Map();
-  renderers.set('WireCollection', wireRenderer);
-  return renderers;
-}
-
-function wireRenderer(element: WireCollection, context: SVGRenderingContext, settings: SVGExportSettings) {
+function renderLinesCollection(element: LineCollectionTrait, context: SVGRenderingContext, settings: SVGExportSettings) {
   if (!element.scene) return;
   let {beforeWrite, round} = settings;
 
@@ -146,7 +152,7 @@ function wireRenderer(element: WireCollection, context: SVGRenderingContext, set
     let t = project(to.x, to.y, to.z);
     if (f.isBehind || t.isBehind) return; // Not quite accurate.
     if (clipToViewPort(f, t, context.width, context.height)) {
-      let stroke = toHexColor(getColor(element, from, to))
+      let stroke = toHexColor(element.getLineColor(from, to))
       let fromId = `${f.x}|${f.y}`;
       let toId = `${t.x}|${t.y}`;
 
@@ -158,7 +164,7 @@ function wireRenderer(element: WireCollection, context: SVGRenderingContext, set
 
   if (elementGraph.getLinksCount() === 0) return; // all outside
 
-  const strokeColor = toHexColor(getColor(element));
+  const strokeColor = toHexColor(element.getLineColor());
   let elementWidth = element.width === undefined ? 1 : element.width;
   const strokeWidth = elementWidth / element.scene.getPixelRatio();
   let style = `fill="none" stroke-width="${strokeWidth}" stroke="${strokeColor}"`
@@ -236,52 +242,8 @@ function getGlobalOrder(graph: ExportGraph) {
   }
 }
 
-function getColor(el: WireCollection, from?: ColorPoint, to?: ColorPoint) {
-  if (el.allowColors && from && from.color && to && to.color) {
-    return mixUint32Color(from.color, to.color);
-  }
-  return [
-    el.color.r,
-    el.color.g,
-    el.color.b,
-    el.color.a,
-  ]
-}
 
-function mixUint32Color(c0: number, c1: number, t = 0.5) {
-  let a = toRgba(c0);
-  let b = toRgba(c1);
-
-  return [
-    a[0] * t + (1 - t) * b[0],
-    a[1] * t + (1 - t) * b[1],
-    a[2] * t + (1 - t) * b[2],
-    a[3] * t + (1 - t) * b[3],
-  ]
-}
-
-function toRgba(x: number) {
-  return [
-    (x >> 24) & 0xff / 255,
-    (x >> 16) & 0xff / 255,
-    (x >> 8) & 0xff / 255,
-    (x) & 0xff / 255
-  ];
-}
-
-function toHexColor(c: number[]) {
-  let r = hexString(c[0]);
-  let g = hexString(c[1])
-  let b = hexString(c[2])
-  return `#${r}${g}${b}`;
-}
-
-function hexString(x: number) {
-  let v = Math.floor(x * 255).toString(16);
-  return (v.length === 1) ? '0' + v : v;
-}
-
-function getProjector(element: WireCollection, context: SVGRenderingContext, roundFactor?: number | boolean) {
+function getProjector(element: Element, context: SVGRenderingContext, roundFactor?: number | boolean) {
   const {width, height, projection, view} = context;
   const mvp = mat4.multiply(mat4.create(), projection, view.matrix)
   mat4.multiply(mvp, mvp, element.worldModel);

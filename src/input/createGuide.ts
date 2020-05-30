@@ -62,7 +62,10 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
     if (options.showGrid === false) return nullElement; 
     let count = 32*2;
     let levelUp = new WireCollection(2*(count + 1), {width: 2.5, is3D: true, allowColors: true})
+    levelUp['svgInvisible'] = true;
+
     let levelDown = new WireCollection(2*(count + 1), {width: 1.5, is3D: true, allowColors: true})
+    levelDown['svgInvisible'] = true;
     const drawContext = scene.getDrawContext();
     let center = drawContext.center;
     let r = camera.getRadius()
@@ -129,6 +132,8 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
     let count = 360;
     let center = scene.getDrawContext().center;
     let geometry = new WireCollection(count + 1 , {width: 3, is3D: true, allowColors: true})
+    geometry['svgInvisible'] = true
+
     let prevPoint;
     let points: WireAccessor[] = [];
     for (let i = 0; i <= count; ++i) {
