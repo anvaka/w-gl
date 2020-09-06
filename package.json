@@ -4,6 +4,8 @@
   "description": "A simple WebGL renderer",
   "main": "build/wgl.js",
   "module": "build/wgl.module.js",
+  "jsdelivr": "build/wgl.js",
+  "unpkg": "build/wgl.js",
   "scripts": {
     "build": "rm -rf build && rollup -c",
     "start": "rm -rf build && rollup -c",
