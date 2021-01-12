@@ -15,6 +15,8 @@ export default function createSpaceMapCamera(scene: WglScene) {
   let sceneOptions = scene.getOptions() || {};
   let allowRotation =
     sceneOptions.allowRotation === undefined ? true : !!sceneOptions.allowRotation;
+  let allowPinchRotation =
+    sceneOptions.allowPinchRotation === undefined ? allowRotation : !!sceneOptions.allowPinchRotation;
 
   let r = 1;
   // angle of rotation around Y axis, tracked from axis X to axis Z
@@ -49,6 +51,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
     zoomToClientCoordinates,
     redraw,
     allowRotation,
+    allowPinchRotation,
     rotateAnimation,
     panAnimation,
 

@@ -38,6 +38,14 @@ type WGLSceneOptions = {
   allowRotation?: boolean;
 
   /**
+   * Indicates whether user can rotate the scene with touch. Overrides 
+   * `allowRotation` for mobile devices.
+   * 
+   * `true` by default.
+   */
+  allowPinchRotation?: boolean;
+
+  /**
    * The smallest angle of rotation around Y axis, tracked from axis X to axis Z.
    * 
    * `-Infinity` by default;

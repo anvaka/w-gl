@@ -3,8 +3,8 @@ import { TouchState, MultiTouchState } from './TouchState';
 export default function createTouchController(inputTarget, camera) {
   let listening = false;
   let activeTouches = new Map();
-  let { allowRotation, panAnimation, rotateAnimation } = camera;
-  let multiTouchState = new MultiTouchState(allowRotation);
+  let { allowRotation, allowPinchRotation, panAnimation, rotateAnimation } = camera;
+  let multiTouchState = new MultiTouchState(allowPinchRotation && allowRotation);
 
   // used for double tap distance check: if they tapped to far, it is not a double tap:
   let lastTouch;
