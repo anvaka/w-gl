@@ -84,13 +84,13 @@ function parseProgram(vertex: string, fragment: string) {
 
   vertex.split('\n').forEach(line => {
     let attributeMatch = line.match(attribute)
-    if (attributeMatch) {
+    if (attributeMatch && !line.trim().startsWith('//')) {
       appendVariables(attributeMatch[1], attributes);
       return;
     }
 
     let uniformMatch = line.match(uniform);
-    if (uniformMatch) {
+    if (uniformMatch && !line.trim().startsWith('//')) {
       appendVariables(uniformMatch[1], uniforms)
       return;
     }
