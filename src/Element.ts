@@ -63,6 +63,19 @@ export default class Element {
     if (this.scene) this.scene.renderFrame();
   }
 
+  insertChildAfter(child: Element, after: Element) {
+    child.parent = this;
+    let afterIndex = this.children.indexOf(after);
+    if (afterIndex < 0) throw new Error('Could not find element to insert after');
+    this.children.splice(afterIndex + 1, 0, child);
+
+    if (child.bindScene) {
+      child.bindScene(this.scene);
+    }
+
+    if (this.scene) this.scene.renderFrame();
+  }
+
   bindScene(scene: WglScene | null) {
     this.scene = scene;
   }
