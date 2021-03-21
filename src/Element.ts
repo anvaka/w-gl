@@ -78,6 +78,8 @@ export default class Element {
 
   bindScene(scene: WglScene | null) {
     this.scene = scene;
+    this.worldTransformNeedsUpdate = true;
+    this.modelViewProjectionNeedsUpdate = true;
   }
 
   traverse(enterCallback, exitCallback) {
