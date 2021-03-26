@@ -30,6 +30,9 @@ export default function createSpaceMapCamera(scene: WglScene) {
   // camera inclination angle. (Angle above Oxz plane)
   let minTheta = option(sceneOptions.minTheta, 0);
   let maxTheta = option(sceneOptions.maxTheta, Math.PI);
+  let minR = option(sceneOptions.minZoom, -Infinity);
+  let maxR = option(sceneOptions.maxZoom, Infinity);
+
   let theta = clamp(0, minTheta, maxTheta);
 
   let centerPointPosition = drawContext.center;
@@ -152,7 +155,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
     if (shouldAnimate) {
       let from = { r, x: centerPointPosition[0], y: centerPointPosition[1] };
       let to = {
-        r: r * (1 - scaleFactor),
+        r: clamp(r * (1 - scaleFactor), minR, maxR),
         x: from.x + dx * scaleFactor,
         y: from.y + dy * scaleFactor
       };
@@ -211,7 +214,10 @@ export default function createSpaceMapCamera(scene: WglScene) {
   function zoomCenterByScaleFactor(scaleFactor: number, dx: number, dy: number) {
     // `scaleFactor` defines whether we shrink the radius by multiplying it by something < 1
     // or increase it by multiplying by something > 1.
-    r *= 1 - scaleFactor;
+    let newR = clamp(r * (1 - scaleFactor), minR, maxR);
+    if (newR === r) return;
+
+    r = newR;
     // let's also move the center closer to the scrolling origin, this gives
     // better UX, similar to the one seen in maps: Map zooms into point under
     // mouse cursor.

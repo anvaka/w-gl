@@ -70,6 +70,16 @@ type WGLSceneOptions = {
   maxTheta?: number;
 
   /**
+   * The smallest zoom distance from the viewing plane
+   */
+  minZoom?: number;
+
+  /**
+   * The largest zoom distance to the viewing plane
+   */
+  maxZoom?: number;
+
+  /**
    * Size of the scene;
    */
   size?: Size;
