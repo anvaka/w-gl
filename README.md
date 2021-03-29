@@ -1,10 +1,9 @@
 # w-gl
 
-A simple renderer for 2d. I use this project to learn more about WebGL apps
-architecture.
+A simple renderer. I use this project to learn more about WebGL apps architecture.
 
 It was mostly inspired by [WebGL Insights](http://www.webglinsights.com/) book,
-and ~~is not really meant to be a reusable library~~ I use it for most of my 2d webgl rendering. I should probably document this more.
+and ~~is not really meant to be a reusable library~~ I use it for most of my 2D and 3D webgl rendering. I should probably document this more.
 
 You can find its application in these repositories:
 
