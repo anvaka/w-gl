@@ -86,7 +86,7 @@ export default function createKeyboardController(inputTarget: HTMLElement, camer
       case 69: // e - roll left
         vPhi = isDown;
         break;
-      case 187: // = - zoom in
+      case 187: // + - zoom in
         vRadius = isDown;
         break;
       case 189: // - - zoom in
