@@ -7,6 +7,7 @@ import {glMatrix, mat4, vec4, vec3, quat} from 'gl-matrix';
 import ViewMatrix from './ViewMatrix';
 import createSpaceMapCamera from './createSpaceMapCamera';
 import {EventCallback, EventKey} from 'ngraph.events';
+import DomCamera from './dom/DomCamera';
 
 // Float32 is not enough for large scenes.
 glMatrix.setMatrixArrayType(Float64Array);
@@ -123,6 +124,7 @@ export interface DrawContext {
   projection: mat4;
   view: ViewMatrix;
   center: vec3;
+  domCamera?: DomCamera;
 }
 
 export interface SceneCoordinate {
