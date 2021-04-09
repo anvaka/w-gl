@@ -2,6 +2,15 @@ import { DrawContext, WglScene } from "src/createScene";
 import Element from "src/Element";
 import epsilon from "./epsilon";
 
+type DomContainerOptions = {
+  /**
+   * If set to true the Dom container is rendered behind the canvas. This
+   * allows to render webgl items in front of the DOM items.
+   * 
+   * Potentially this also leads to higher calculation demands.
+   */
+  seeThrough: boolean
+}
 /**
  * Synchronizes CSS3 rendering with the parent drawing context.
  */
@@ -18,8 +27,9 @@ export default class DomContainer extends Element {
   camera: HTMLElement;
 
   bound: boolean;
+  seeThrough: boolean;
 
-  constructor() {
+  constructor(options?: DomContainerOptions) {
     super();
     this.container = document.createElement('div');
     this.container.style.overflow = 'hidden';
@@ -32,6 +42,9 @@ export default class DomContainer extends Element {
     this.container.appendChild(this.camera);
     this.container.style.pointerEvents = 'none';
     this.bound = false;
+
+    this.seeThrough = (options && (typeof options.seeThrough !== 'undefined')) ?
+      options.seeThrough : false;
   }
 
   bindScene(scene: WglScene) {
@@ -41,7 +54,9 @@ export default class DomContainer extends Element {
       if (!parent) {
           throw new Error('Scene does not have a parent element');
       }
-      parent.append(this.container);
+      if (this.seeThrough) parent.insertBefore(this.container, dc.canvas);
+      else parent.append(this.container);
+
       this.bound = true;
     } else {
       if (this.container.parentElement) {

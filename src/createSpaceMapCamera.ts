@@ -61,7 +61,13 @@ export default function createSpaceMapCamera(scene: WglScene) {
     getRadius,
   };
 
-  let inputTarget = drawContext.canvas;
+  let inputTarget: HTMLElement | null = drawContext.canvas;
+  if (typeof sceneOptions.inputTarget === 'string') {
+    inputTarget =  document.querySelector(sceneOptions.inputTarget);
+    if (!inputTarget) throw new Error('Cannot find input target: ' + sceneOptions.inputTarget);
+  } else if (sceneOptions.inputTarget) {
+    inputTarget = sceneOptions.inputTarget;
+  }
 
   const keyboardController = createKeyboardController(inputTarget, api);
   const touchController = createTouchController(inputTarget, api);

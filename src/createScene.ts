@@ -110,6 +110,14 @@ type WGLSceneOptions = {
    * Don't use this - this is experimental bit.
    */
   camera?: any
+
+  /**
+   * If this property is set w-gl scene will listen to keyboard/mouse/touch
+   * events from it.
+   * 
+   * Otherwise the canvas is used.
+   */
+  inputTarget?: HTMLElement | string
 }
 
 /**
