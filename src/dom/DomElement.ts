@@ -1,4 +1,4 @@
-import DomCamera from "./DomCamera";
+import DomContainer from "./DomContainer";
 import Element from "../Element";
 import {WglScene, DrawContext} from '../createScene';
 import epsilon from "./epsilon";
@@ -6,10 +6,17 @@ import epsilon from "./epsilon";
 export default class DomElement extends Element {
   el: HTMLElement;
 
+  // Cached version of the CSS transform. The idea is that caching
+  // improves performance. Need to validate this though.
+  lastTransform: String;
+
   constructor(customStyle: CSSStyleDeclaration) {
     super();
 
+    this.lastTransform = '';
+
     this.el = document.createElement('div');
+    this.el.style.position = 'absolute';
     this.el.style.pointerEvents = 'initial';
     if (customStyle) {
       let ourStyle = this.el.style;
@@ -20,22 +27,31 @@ export default class DomElement extends Element {
   }
 
   bindScene(scene: WglScene) {
-    let dc = scene.getDrawContext();
-    if (!dc.domCamera) {
-      if (!dc.canvas.parentElement) {
-        throw new Error('Scene does not have a parent element');
+    if (scene) {
+      let domContainer = findDomContainer(this);
+      if (domContainer) {
+        domContainer.acceptDomChild(this.el);
+      } else {
+        throw new Error('DomElement should be part of DomContainer hierarchy');
       }
-      dc.domCamera = new DomCamera(dc.canvas.parentElement);
+    } else if (this.el.parentNode) {
+      this.el.parentNode.removeChild(this.el);
     }
-    dc.domCamera.camera.appendChild(this.el);
     super.bindScene(scene);
   }
 
-  draw(gl: WebGLRenderingContext, drawContext: DrawContext) {
-    if (!drawContext.domCamera) return;
-    drawContext.domCamera.render(drawContext)
+  draw(/* gl: WebGLRenderingContext */) {
+    let thisTransform = getObjectCSSMatrix(this.worldModel);
+    if (thisTransform !== this.lastTransform) {
+      this.el.style.transform = thisTransform;
+      this.lastTransform = thisTransform;
+    }
+  }
 
-    this.el.style.transform = getObjectCSSMatrix(this.worldModel);
+  dispose() {
+    if (this.el.parentNode) {
+      this.el.parentNode.removeChild(this.el);
+    }
   }
 }
 
@@ -59,4 +75,10 @@ function getObjectCSSMatrix(elements: number[]) {
       epsilon(elements[15]) + ')';
 
     return 'translate(-50%,-50%)' + matrix3d;
+}
+
+function findDomContainer(startFrom: Element) {
+  // Note: might be better to use duck typing instead.
+  if (startFrom instanceof DomContainer) return startFrom;
+  return startFrom.parent && findDomContainer(startFrom.parent);
 }

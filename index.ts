@@ -19,3 +19,4 @@ export {default as FloatAttribute} from './src/gl/FloatAttribute';
 export {default as InstancedAttribute} from './src/gl/InstancedAttribute';
 export {default as GLCollection} from './src/GLCollection/GLCollection';
 export {default as DomElement} from './src/dom/DomElement';
+export {default as DomContainer} from './src/dom/DomContainer';
