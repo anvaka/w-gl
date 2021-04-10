@@ -84,15 +84,19 @@ export default class BaseAttribute {
   /**
    * "Add block" returns code that adds attribute values to the shared buffer.
    */
-  getAddBlock(offset: number): AddBlock {
+  getAddBlock(offset: number, join?: string): AddBlock {
     throw new Error('Concrete types have to implement this');
+  }
+
+  getMoveBlock(offset: number, join?: string): string {
+    throw new Error('Concrete type have to implement `getMoveBlock`')
   }
 
   /**
    * "Get block" returns code that reconstructs attribute's values from the shared buffer
    */
   getGetBlock(offset: number): string {
-    throw new Error('Concrete types have to implement this');
+    throw new Error('Concrete types have to implement `getGetBlock`');
   }
 
   getDivisor(divisor: 0|1) {

@@ -29,6 +29,10 @@ export default class GLCollection extends Element {
     this.program.update(id, point);
   }
 
+  remove(id: number) {
+    return this.program.remove(id);
+  }
+
   get(id: number) {
     return this.program.get(id);
   }

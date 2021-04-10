@@ -16,6 +16,14 @@ export default class NumberAttribute extends BaseAttribute {
     };
   }
 
+  getMoveBlock(offset: number, lineJoin = '\n'): string {
+    let name = this.name;
+    let variableName = `${name}Array`;
+    let code = '';
+    code += `${variableName}[to + ${offset}] = ${variableName}[from + ${offset}];${lineJoin}`;
+    return code;
+  }
+
   getGetBlock(offset: number) {
     return `${this.name}: ${this.name}Array[index + ${offset}]`;
   }

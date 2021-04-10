@@ -29,7 +29,7 @@ export default function getProgramInfo(programDefinition: ProgramDefinition): Pr
       console.error(`Unknown type ${type} for ${name}`);
       throw new Error(`Unknown type ${type} for ${name}`);
     }
-    typeDef.debug = programDefinition && programDefinition.debug;
+    typeDef.debug = (programDefinition && programDefinition.debug) || false;
     typeDef.setName(name);
 
     let instancedAttribute = programDefinition.instanced && programDefinition.instanced[name];

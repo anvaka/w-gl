@@ -1,7 +1,8 @@
-import DomContainer from "./DomContainer";
-import Element from "../Element";
-import {WglScene, DrawContext} from '../createScene';
-import epsilon from "./epsilon";
+import eventify from 'ngraph.events';
+import DomContainer from './DomContainer';
+import Element from '../Element';
+import {WglScene} from '../createScene';
+import epsilon from './epsilon';
 
 export default class DomElement extends Element {
   el: HTMLElement;
@@ -24,18 +25,27 @@ export default class DomElement extends Element {
         ourStyle[key] = customStyle[key];
       })
     }
+    eventify(this);
+  }
+
+  updateWorldTransform(force?: boolean) {
+    let updated = super.updateWorldTransform(force);
+    if (updated) {
+      (this as any).fire('updateTransform', this);
+    }
+    return updated;
   }
 
   bindScene(scene: WglScene) {
     if (scene) {
       let domContainer = findDomContainer(this);
-      if (domContainer) {
-        domContainer.acceptDomChild(this.el);
-      } else {
+      if (!domContainer) {
         throw new Error('DomElement should be part of DomContainer hierarchy');
       }
+      domContainer.acceptDomChild(this);
     } else if (this.el.parentNode) {
       this.el.parentNode.removeChild(this.el);
+      (this as any).fire('disposed', this);
     }
     super.bindScene(scene);
   }

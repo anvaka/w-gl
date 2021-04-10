@@ -1,6 +1,8 @@
 import { DrawContext, WglScene } from "src/createScene";
 import Element from "src/Element";
+import DomElement from "./DomElement";
 import epsilon from "./epsilon";
+import { SeeThroughCollection } from "./SeeThroughCollection";
 
 type DomContainerOptions = {
   /**
@@ -8,6 +10,22 @@ type DomContainerOptions = {
    * allows to render webgl items in front of the DOM items.
    * 
    * Potentially this also leads to higher calculation demands.
+   * 
+   * Note: you are responsible to make the canvas clear color be transparent:
+   * 
+   * ``` js
+   *   scene.setClearColor(0, 0, 0, 0); // Alpha set to 0
+   * ```
+   * 
+   * Also you need to disable pointer events on canvas and provide an alternative
+   * DOM element (behind the canvas) to listen to events:
+   * 
+   * `` js
+   * let scene = createScene(canvas, {
+   *    inputTarget: HTMLElement | CSSSelector 
+   * });
+   * scene.getDrawContext().canvas.style.pointerEvents = 'none';
+   * ```
    */
   seeThrough: boolean
 }
@@ -28,6 +46,8 @@ export default class DomContainer extends Element {
 
   bound: boolean;
   seeThrough: boolean;
+
+  seeThroughQuads?: SeeThroughCollection;
 
   constructor(options?: DomContainerOptions) {
     super();
@@ -63,12 +83,36 @@ export default class DomContainer extends Element {
         this.container.parentElement.removeChild(this.container);
       }
       this.bound = false;
+      if (this.seeThroughQuads) {
+        // TODO: need better dispose logic here.
+        this.removeChild(this.seeThroughQuads);
+      }
     }
     super.bindScene(scene);
   }
 
-  acceptDomChild(child: HTMLElement) {
-    this.camera.appendChild(child);
+  acceptDomChild(child: DomElement) {
+    this.camera.appendChild(child.el);
+    if (!this.seeThrough) {
+      return;
+    }
+    // For the case of "See through" we render DOM container behind the webgl canvas.
+    // Since this places canvas on top of the DOM container, every item of the scene
+    // will be visible on top of the DOM elements. We need to "cut out" wholes in the
+    // scene, so that DOM elements can be seen as if they belong to the scene.
+    // 
+    // For this we use a collection of quads, synchronize their transform matrices with
+    // DOM element transform matrices, and disable blending for them, while keeping them
+    // transparent.
+    if (!this.scene) {
+      throw new Error('Scene should be available at this point!');
+    }
+
+    if (!this.seeThroughQuads) {
+      this.seeThroughQuads = new SeeThroughCollection(this.scene.getGL());
+      this.scene.appendChild(this.seeThroughQuads);
+    }
+    this.seeThroughQuads.appendFromDomElement(child);
   }
 
   draw(gl: WebGLRenderingContext, drawContext: DrawContext) {

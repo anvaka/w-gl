@@ -43,6 +43,14 @@ export type RenderProgram = {
   update: (vertexId: number, vertex: Object) => void;
 
   /**
+   * Requests to remove a vertex from the collection. This is performed
+   * by moving the last element of the collection on top of the requested index;
+   * 
+   * Returns index of the newly vertex.
+   */
+  remove: (vertexId: number) => number;
+
+  /**
    * Reads a vertex object from the buffer. Note: this method creates a new object
    * so we don't recommend to use it in a hot path to avoid GC pressure.
    * 
@@ -89,6 +97,18 @@ export type RenderProgram = {
    * This method is useful when you want to load persisted buffer (from `getBuffer()`)
    */
   appendBuffer: (buffer: Uint8Array, offset: number) => void;
+
+  /**
+   * Allows to quickly adjust how many items are in the rendered collection. 
+   * Setting this number to `0` makes WebGL "clear" the collection. Any subsequent `add()`
+   * calls will proceed from the beginning of the collection
+   */
+  setCount: (count: number) => void;
+
+  /**
+   * Returns current number of added vertices.
+   */
+  getCount: () => number;
 }
 
 /**
@@ -112,13 +132,13 @@ export type ProgramDefinition = {
    * in the buffer, the buffer will be doubled in size. For best performance
    * it's best to reserve exact amount of memory upon program creation.
    */
-  capacity: number;
+  capacity?: number;
 
   /**
    * If set to true, compiled javascript code has more checks and prints
    * the entire source code.
    */
-  debug: boolean;
+  debug?: boolean;
 
   /**
    * Provides access to webgl rendering context. This parameter may go away
@@ -410,7 +430,7 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
   }
 
   function addCodeThatCounts(programInfo, code) {
-    code.addToInit(["  let count = 0;"]);
+    code.addToInit(["  var count = 0;"]);
     code.addToAPI([
       "setCount: (newCount) => count = newCount,",
       "getCount: () => count,",
@@ -421,13 +441,13 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
     let { attributes, bytePerVertex, itemPerVertex } = programInfo;
 
     code.addToInit([
-      `let bytePerVertex = ${bytePerVertex};`,
-      `let itemPerVertex = ${itemPerVertex};`,
-      `let capacity = ${(structure.capacity || 1) * bytePerVertex};`,
-      "let buffer = new ArrayBuffer(capacity);",
-      "",
-      "let isDirty = true;",
-      "let dirtyOffset = 0;",
+      `var bytePerVertex = ${bytePerVertex};`,
+      `var itemPerVertex = ${itemPerVertex};`,
+      `var capacity = ${(structure.capacity || 1) * bytePerVertex};`,
+      'var buffer = new ArrayBuffer(capacity);',
+      '',
+      'var isDirty = true;',
+      'var dirtyOffset = 0;',
     ]);
 
     attributes.forEach((attribute) => {
@@ -440,6 +460,7 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
       "add: add,",
       "get: get,",
       "update: update,",
+      "remove: remove,",
       "getBuffer: getBuffer,",
       "appendBuffer: appendBuffer,",
     ]);
@@ -449,6 +470,7 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
     function getImplementationCode() {
       let modifyBufferBlock: string[] = [];
       let getAttributeBlock: string[] = [];
+      let moveBufferBlock: string[] = [];
       let extendBlock: string[] = [];
       let addOffset = 0;
 
@@ -460,9 +482,9 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
       extend();
     }
 
-    let index = count * itemPerVertex;
+    var index = count * itemPerVertex;
 
-    ${modifyBufferBlock.join("\n    ")}
+    ${modifyBufferBlock.join("")}
 
     isDirty = true;
     return count++;
@@ -475,6 +497,24 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
     isDirty = true;
   }
 
+  function remove(index) {
+    ${getRemoveMethodDebugAsserts()}
+    isDirty = true;
+    count -= 1;
+    if (count <= 0) {
+      count = 0;
+      return count; // last element removed
+    }
+    // move last element to take this element's position
+    var from = count * itemPerVertex;
+    var to = index * itemPerVertex;
+    for (var i = 0; i < itemPerVertex; ++i) {
+      ${moveBufferBlock.join('\n')}
+    }
+
+    return count;
+  }
+
   function get(index) {
     index *= itemPerVertex; 
     return {
@@ -483,7 +523,7 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
   }
 
   function extend() {
-    let oldBuffer = buffer;
+    var oldBuffer = buffer;
     capacity *= 2;
     buffer = new ArrayBuffer(capacity);
     // Copy old buffer to the new buffer
@@ -497,7 +537,7 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
   }
 
   function appendBuffer(uint8Collection, byteOffset) {
-    let requiredCapacity = byteOffset + uint8Collection.byteLength;
+    var requiredCapacity = byteOffset + uint8Collection.byteLength;
     if (requiredCapacity > capacity) {
       // extend the buffer to fulfill the request:
       let oldBuffer = buffer;
@@ -506,7 +546,7 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
       capacity = requiredCapacity;
     }
 
-    let view = new Uint8Array(buffer);
+    var view = new Uint8Array(buffer);
     view.set(uint8Collection, byteOffset);
     count = Math.floor(requiredCapacity / bytePerVertex);
 
@@ -522,8 +562,9 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
         if (extendCollectionCode) extendBlock.push(extendCollectionCode);
 
         // TODO: need a better name for this:
-        let addBlock = attribute.getAddBlock(addOffset);
+        let addBlock = attribute.getAddBlock(addOffset, '\n    ');
         modifyBufferBlock.push(addBlock.code);
+        moveBufferBlock.push(attribute.getMoveBlock(addOffset, '\n    '));
         getAttributeBlock.push(attribute.getGetBlock(addOffset));
         // Every time we add an item to the collection we need to move index in the buffer
         addOffset = addBlock.offset;
@@ -539,6 +580,13 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
 `;
   }
 
+  function getRemoveMethodDebugAsserts() {
+    if (!structure.debug) return '';
+    return `
+    if (!Number.isFinite(index)) throw new Error('remove() requires integer value for "index", got: ' + index);
+    if (index < 0 || index >= count) throw new Error('remove(' + index + ') is outside of [0..' + count + ') range');
+`;
+  }
   function link(vertexSource: string, fragmentSource: string) {
     const vertex = compileShader(gl.VERTEX_SHADER, vertexSource);
     const fragment = compileShader(gl.FRAGMENT_SHADER, fragmentSource);

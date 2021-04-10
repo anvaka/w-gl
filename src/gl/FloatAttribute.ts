@@ -26,6 +26,17 @@ export default class FloatAttribute extends BaseAttribute {
     };
   }
 
+  getMoveBlock(offset: number, lineJoin = '\n'): string {
+    let name = this.name!;
+    let variableName = `${name}Array`;
+    let code: string[] = [];
+
+    for (let i = 0; i < this.count; ++i) {
+      code.push(`${variableName}[to + ${offset + i}] = ${variableName}[from + ${offset + i}];`);
+    }
+    return code.join(lineJoin);
+  }
+
   getGetBlock(offset: number) {
     let variableName = `${this.name}Array`;
     let code: string[] = [];
