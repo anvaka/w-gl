@@ -1,4 +1,5 @@
 import {quat} from 'gl-matrix';
+import getInputTarget from './input/getInputTarget';
 
 export default function createGameCamera(scene, drawContext) {
   let rotateSpeed =  Math.PI/360;
@@ -46,11 +47,12 @@ export default function createGameCamera(scene, drawContext) {
     }
   };
 
-  let canvas = drawContext.canvas;
-  canvas.style.outline = 'none';
-  canvas.setAttribute('tabindex', 0);
-  canvas.addEventListener('keydown', handleKeyDown);
-  canvas.addEventListener('keyup', handleKeyUp);
+  let sceneOptions = scene.getOptions() || {};
+  const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
+  inputTarget.style.outline = 'none';
+  inputTarget.setAttribute('tabindex', '0');
+  inputTarget.addEventListener('keydown', handleKeyDown);
+  inputTarget.addEventListener('keyup', handleKeyUp);
 
   let frameHandle = requestAnimationFrame(frame);
 
@@ -102,6 +104,7 @@ export default function createGameCamera(scene, drawContext) {
     quat.multiply(view.rotation, view.rotation, frameRotation);
 
     view.update();
+    scene.getRoot().scheduleMVPUpdate();
 
     scene.fire('transform', drawContext);
     scene.renderFrame();
@@ -109,8 +112,8 @@ export default function createGameCamera(scene, drawContext) {
 
   function dispose() {
     cancelAnimationFrame(frameHandle);
-    canvas.removeEventListener('keydown', handleKeyDown);
-    canvas.removeEventListener('keyup', handleKeyUp);
+    inputTarget.removeEventListener('keydown', handleKeyDown);
+    inputTarget.removeEventListener('keyup', handleKeyUp);
   }
 
   function setRotationSpeed(speed) {

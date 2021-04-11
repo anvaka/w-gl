@@ -5,6 +5,7 @@ import createTouchController from './input/createTouchController';
 import createKeyboardController from './input/createKeyboardController';
 import createMouseController from './input/createMouseController'
 import { WglScene } from './createScene';
+import getInputTarget from './input/getInputTarget';
 
 export default function createSpaceMapCamera(scene: WglScene) {
   const drawContext = scene.getDrawContext();
@@ -61,13 +62,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
     getRadius,
   };
 
-  let inputTarget: HTMLElement | null = drawContext.canvas;
-  if (typeof sceneOptions.inputTarget === 'string') {
-    inputTarget =  document.querySelector(sceneOptions.inputTarget);
-    if (!inputTarget) throw new Error('Cannot find input target: ' + sceneOptions.inputTarget);
-  } else if (sceneOptions.inputTarget) {
-    inputTarget = sceneOptions.inputTarget;
-  }
+  const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
 
   const keyboardController = createKeyboardController(inputTarget, api);
   const touchController = createTouchController(inputTarget, api);

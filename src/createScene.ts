@@ -7,6 +7,7 @@ import {glMatrix, mat4, vec4, vec3, quat} from 'gl-matrix';
 import ViewMatrix from './ViewMatrix';
 import createSpaceMapCamera from './createSpaceMapCamera';
 import {EventCallback, EventKey} from 'ngraph.events';
+import getInputTarget from './input/getInputTarget';
 
 // Float32 is not enough for large scenes.
 glMatrix.setMatrixArrayType(Float64Array);
@@ -110,6 +111,8 @@ type WGLSceneOptions = {
    */
   camera?: any
 
+  createCameraController?: any
+
   /**
    * If this property is set w-gl scene will listen to keyboard/mouse/touch
    * events from it.
@@ -138,7 +141,6 @@ export interface SceneCoordinate {
   y: number
   z: number
 }
-
 
 export interface WglScene extends EventedType {
   /**
@@ -196,9 +198,9 @@ export interface WglScene extends EventedType {
   getGL: () => WebGLRenderingContext
 
   /**
-   * Returns current camera. Don't rely on this method, it is subject to change.
+   * Returns current camera controller. Don't rely on this method, it is subject to change.
    */
-  getCamera: () => any
+  getCameraController: () => any
 }
 
 
@@ -223,6 +225,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
   let sceneRoot = new Element();
   let hasMouseClickListeners = false;
   let hasMouseMoveListeners = false;
+  let inputTarget: HTMLElement = getInputTarget(options.inputTarget, canvas);
 
   let view = new ViewMatrix();
   let projection = mat4.create();
@@ -262,19 +265,21 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     getPixelRatio,
     setPixelRatio,
 
-    getCamera,
-    setCamera,
+    getCameraController,
+    setCameraController,
 
     getDrawContext,
     getOptions
   });
 
   let realOn = api.on;
+  // We don't want to waste CPU resources if nobody cares about mouse events
+  // only when they start listen to events we will perform the input listening
   api.on = trapOn;
 
   sceneRoot.bindScene(api);
 
-  let cameraController = (options.camera || createSpaceMapCamera)(api, drawContext);
+  let cameraController = (options.createCameraController || createSpaceMapCamera)(api, drawContext);
 
   let disposeClick: Function;
 
@@ -310,14 +315,14 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     return sceneRoot;
   }
 
-  function setCamera(createCamera: Function) {
+  function setCameraController(createCamera: Function) {
     if (cameraController) {
       cameraController.dispose();
     }
     cameraController = createCamera(api, drawContext);
   }
 
-  function getCamera() {
+  function getCameraController() {
     return cameraController;
   }
 
@@ -335,14 +340,13 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
   }
 
   function listenToEvents() {
-    canvas.addEventListener('mousemove', onMouseMove);
+    inputTarget.addEventListener('mousemove', onMouseMove);
     disposeClick = onClap(canvas, onMouseClick);
     window.addEventListener('resize', onResize, true);
   }
 
   function dispose() {
-    canvas.removeEventListener('mousemove', onMouseMove);
-
+    inputTarget.removeEventListener('mousemove', onMouseMove);
 
     if (disposeClick) disposeClick();
 

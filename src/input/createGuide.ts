@@ -29,7 +29,7 @@ interface GuidOptions {
 }
 
 export default function createGuide(scene: WglScene, options: GuidOptions = {}) {
-  let camera = scene.getCamera();
+  let camera = scene.getCameraController();
   const nullElement = {
       redraw: Function.prototype,
       dispose: Function.prototype
