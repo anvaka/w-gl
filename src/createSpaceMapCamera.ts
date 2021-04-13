@@ -36,7 +36,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
 
   let theta = clamp(0, minTheta, maxTheta);
 
-  let centerPointPosition = drawContext.center;
+  let centerPointPosition = view.center;
   let cameraPosition = view.position;
 
   let panAnimation = createKineticAnimation(getCenterPosition, setCenterPosition);

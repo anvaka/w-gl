@@ -67,7 +67,7 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
     let levelDown = new WireCollection(2*(count + 1), {width: 1.5, is3D: true, allowColors: true})
     levelDown['svgInvisible'] = true;
     const drawContext = scene.getDrawContext();
-    let center = drawContext.center;
+    let center = drawContext.view.center;
     let r = camera.getRadius()
 
     redraw();
@@ -130,7 +130,7 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
     if (options.showCursor === false) return nullElement; 
 
     let count = 360;
-    let center = scene.getDrawContext().center;
+    let center = scene.getDrawContext().view.center;
     let geometry = new WireCollection(count + 1 , {width: 3, is3D: true, allowColors: true})
     geometry['svgInvisible'] = true
 

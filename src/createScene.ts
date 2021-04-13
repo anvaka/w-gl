@@ -133,7 +133,6 @@ export interface DrawContext {
   canvas: HTMLCanvasElement;
   projection: mat4;
   view: ViewMatrix;
-  center: vec3;
 }
 
 export interface SceneCoordinate {
@@ -242,7 +241,6 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     projection,
     view,
     fov,
-    center: [0, 0, 0],
  };
 
   updateCanvasSize();

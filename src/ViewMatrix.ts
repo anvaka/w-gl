@@ -27,6 +27,11 @@ export default class ViewMatrix {
    */
   rotation: quat;
 
+  /**
+   * Where the camera is looking
+   */
+  center: vec3;
+
   constructor(viewMatrix?: mat4) {
     this.matrix = viewMatrix || mat4.create();
     // True position of the camera in the world:
@@ -34,6 +39,7 @@ export default class ViewMatrix {
 
     this.position = [0, 0, 0];
     this.rotation = [0, 0, 0, 1];
+    this.center = [0, 0, 0];
 
     this.deconstructPositionRotation();
   }
