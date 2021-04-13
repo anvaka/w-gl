@@ -237,7 +237,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
   function redraw() {
     let newCameraPosition = getSpherical(r, theta, phi);
 
-    // now we want to know what is an up vector? The idea is that its position
+    // We want to know what is an up vector? The idea is that its position
     // can also be represented in spherical coordinates of a sphere with slightly larger
     // radius. How much larger?
     // Just assume `up` vector length is 1, then the sphere  radius is sqrt(r * r + 1 * 1):

@@ -11,6 +11,10 @@ const zAxis = [0, 0, 1];
  */
 export default class ViewMatrix {
   matrix: mat4;
+
+  /**
+   * LookAt matrix of the camera.
+   */
   cameraWorld: mat4;
 
   /**
@@ -61,15 +65,15 @@ export default class ViewMatrix {
     return this;
   } 
 
-  translateX(distance) {
+  translateX(distance: number) {
     return this.translateOnAxis(xAxis, distance);
   }
 
-  translateY(distance) {
+  translateY(distance: number) {
     return this.translateOnAxis(yAxis, distance);
   }
 
-  translateZ(distance) {
+  translateZ(distance: number) {
     return this.translateOnAxis(zAxis, distance);
   }
 }

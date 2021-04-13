@@ -1,7 +1,8 @@
 import {quat} from 'gl-matrix';
+import {DrawContext, WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
 
-export default function createGameCamera(scene, drawContext) {
+export default function createGameCamera(scene: WglScene, drawContext: DrawContext) {
   let rotateSpeed =  Math.PI/360;
   let speedFactor = 1;
   let moveSpeed = 0.2;
