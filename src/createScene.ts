@@ -32,6 +32,43 @@ type WGLSceneOptions = {
   devicePixelRatio?: number;
 
   /**
+   * Size of the scene;
+   */
+  size?: Size;
+
+  /**
+   * WebGL context options. 
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
+   */
+  wglContextOptions?: WebGLContextAttributes
+
+  /**
+   * Field of view angle defined in radians.
+   */
+  fov?: number
+
+  /**
+   * Near bound of the frustum
+   */
+  near?: number
+
+  /**
+   * far bound of the frustum
+   */
+  far?: number
+
+  /**
+   * If this property is set w-gl scene will listen to keyboard/mouse/touch
+   * events from it.
+   * 
+   * Otherwise the canvas is used.
+   */
+  inputTarget?: HTMLElement | string
+
+  // --------------------- Navigation settings ---------------------------------------
+  // TODO: Move all navigation specific settings to a subtype of the scene options.
+  // This should allow custom options for custom navigation models.
+  /**
    * Indicates whether user can rotate the scene (either with an `alt` key or with touch/keyboard)
    * 
    * `true` by default.
@@ -81,45 +118,11 @@ type WGLSceneOptions = {
   maxZoom?: number;
 
   /**
-   * Size of the scene;
-   */
-  size?: Size;
-
-  /**
-   * WebGL context options. 
-   * @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
-   */
-  wglContextOptions?: WebGLContextAttributes
-
-  /**
-   * Field of view angle defined in radians.
-   */
-  fov?: number
-
-  /**
-   * Near bound of the frustum
-   */
-  near?: number
-
-  /**
-   * far bound of the frustum
-   */
-  far?: number
-
-  /**
    * Don't use this - this is experimental bit.
    */
   camera?: any
 
   createCameraController?: any
-
-  /**
-   * If this property is set w-gl scene will listen to keyboard/mouse/touch
-   * events from it.
-   * 
-   * Otherwise the canvas is used.
-   */
-  inputTarget?: HTMLElement | string
 }
 
 /**

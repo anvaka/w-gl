@@ -4,9 +4,13 @@ import createKineticAnimation from './animation/createKineticAnimation';
 import createTouchController from './input/createTouchController';
 import createKeyboardController from './input/createKeyboardController';
 import createMouseController from './input/createMouseController'
-import { WglScene } from './createScene';
+import {WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
+import {option, clamp, getSpherical} from './cameraUtils';
 
+/**
+ * SpaceMap camera is best suited for map-like applications.
+ */
 export default function createSpaceMapCamera(scene: WglScene) {
   const drawContext = scene.getDrawContext();
   let view = drawContext.view;
@@ -14,36 +18,32 @@ export default function createSpaceMapCamera(scene: WglScene) {
   let inclinationSpeed = Math.PI * 1.618;
 
   let sceneOptions = scene.getOptions() || {};
-  let allowRotation =
-    sceneOptions.allowRotation === undefined ? true : !!sceneOptions.allowRotation;
-  let allowPinchRotation =
-    sceneOptions.allowPinchRotation === undefined ? allowRotation : !!sceneOptions.allowPinchRotation;
+  let allowRotation = sceneOptions.allowRotation === undefined ? true : !!sceneOptions.allowRotation;
+  let allowPinchRotation = sceneOptions.allowPinchRotation === undefined ? allowRotation : !!sceneOptions.allowPinchRotation;
 
-  let r = 1;
   // angle of rotation around Y axis, tracked from axis X to axis Z
   let minPhi = option(sceneOptions.minPhi, -Infinity);
   let maxPhi = option(sceneOptions.maxPhi, Infinity);
   // Rotate the camera so it looks to the central point in Oxy plane from distance r.
   let phi = clamp(-Math.PI / 2, minPhi, maxPhi);
 
-  let planeNormal: vec3 = [0, 0, 1];
-
   // camera inclination angle. (Angle above Oxz plane)
   let minTheta = option(sceneOptions.minTheta, 0);
   let maxTheta = option(sceneOptions.maxTheta, Math.PI);
+  let theta = clamp(0, minTheta, maxTheta);
+
+  // Distance to the point at which our camera is looking
   let minR = option(sceneOptions.minZoom, -Infinity);
   let maxR = option(sceneOptions.maxZoom, Infinity);
-
-  let theta = clamp(0, minTheta, maxTheta);
+  let r = clamp(1, minR, maxR);
 
   let centerPointPosition = view.center;
   let cameraPosition = view.position;
 
   let panAnimation = createKineticAnimation(getCenterPosition, setCenterPosition);
-  let rotateAnimation = createKineticAnimation(getCenterRotation, setCenterRotation, {
-    minVelocity: 1
-  });
+  let rotateAnimation = createKineticAnimation(getCenterRotation, setCenterRotation, {minVelocity: 1});
 
+  let planeNormal: vec3 = [0, 0, 1];
   const api = {
     dispose,
     setViewBox,
@@ -104,8 +104,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
 
     let denom = vec3.dot(planeNormal, ray);
     if (Math.abs(denom) > 1e-7) {
-      let t =
-        vec3.dot(
+      let t = vec3.dot(
           vec3.sub([0, 0, 0], centerPointPosition, cameraPosition),
           planeNormal
         ) / denom;
@@ -270,22 +269,4 @@ export default function createSpaceMapCamera(scene: WglScene) {
     scene.fire('transform', drawContext);
     scene.renderFrame();
   }
-}
-
-function getSpherical(r: number, theta: number, phi: number): vec3 {
-  let z = r * Math.cos(theta);
-  let x = r * Math.sin(theta) * Math.cos(phi);
-  let y = r * Math.sin(theta) * Math.sin(phi);
-  return [x, y, z];
-}
-
-function clamp(v: number, min: number, max: number) {
-  if (v < min) v = min;
-  if (v > max) v = max;
-  return v;
-}
-
-function option(value: number | undefined, fallback: number) {
-  if (value === undefined) return fallback;
-  return value;
 }

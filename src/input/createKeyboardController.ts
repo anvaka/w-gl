@@ -1,3 +1,5 @@
+import {clampTo} from '../cameraUtils';
+
 export default function createKeyboardController(inputTarget: HTMLElement, camera) {
   let frameHandle = 0;
 
@@ -92,7 +94,7 @@ export default function createKeyboardController(inputTarget: HTMLElement, camer
       case 189: // - - zoom in
         vRadius = -isDown;
         break;
-      case 82: // r - inline up
+      case 82: // r - incline up
         vIncline = isDown;
         break;
       case 70: // f - incline down
@@ -111,7 +113,7 @@ export default function createKeyboardController(inputTarget: HTMLElement, camer
         vy = isDown;
         break;
       case 40: // ↓
-      case 83: // d
+      case 83: // s
         vy = -isDown;
         break;
       case 71: // g
@@ -127,8 +129,4 @@ export default function createKeyboardController(inputTarget: HTMLElement, camer
 
 function isModifierKey(e) {
   return e.altKey || e.ctrlKey || e.metaKey;
-}
-
-function clampTo(x, threshold, clampValue) {
-  return Math.abs(x) < threshold ? clampValue: x;
 }
