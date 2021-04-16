@@ -7,25 +7,30 @@ const {mat4, quat, vec3} = glMatrix;
 let upCollection = new WireCollection(10, { width: 4 });
 window.up = upCollection.add({
   from: {x: 0, y: 0, z: 0, color: 0xff0000ff},
-  to: {x: 0, y: 1, z: 0, color: 0xff00ffff},
+  to: {x: 0, y: 0, z: 1, color: 0x0000ffff},
 })
-let scene = createScene(document.querySelector('canvas'), {});
+upCollection.add({
+  from: {x: 0, y: 0, z: 0, color: 0xff0000ff},
+  to: {x: 0, y: 1, z: 0, color: 0x00ff00ff},
+})
+
+let scene = createScene(document.querySelector('canvas'), {
+  createCameraController: createGameCamera
+});
 // drawGraph(scene);
-
-
-createGuide(scene);
-// scene.appendChild(upCollection)
+// createGuide(scene);
+scene.appendChild(upCollection)
 let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));
 scene.appendChild(someShape1);
 //let someShape = createCameraImage();
 
 // and lets bring it into the view:
-scene.setViewBox({
-  left: 0,
-  top: 10,
-  right: 10,
-  bottom: 0 
-})
+// scene.setViewBox({
+//   left: 0,
+//   top: 10,
+//   right: 10,
+//   bottom: 0 
+// })
 
 function createCameraImage() {
   let cameraImage = new WireCollection(100, {width:4, is3D: true, allowColors: true});
@@ -143,7 +148,7 @@ function drawCube(lines) {
     from: {x: 0.5, y: -0.5, z:  0.5, color},
     to:   {x: 0.5, y: -0.5, z: -0.5, color},
   });
-
+/*
   let last = {x: 0.5, y: -0.5, z:  0, color};
   let n = [1, 0.4, 0]
   for (let i = 0; i < 10; ++i) {
@@ -168,6 +173,7 @@ function drawCube(lines) {
     lines.add({ from: last, to:   other });
     last = other;
   }
+  */
   return lines
 }
 

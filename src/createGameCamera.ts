@@ -1,7 +1,8 @@
-import {vec3, quat, mat4} from 'gl-matrix';
+import {vec3, mat4} from 'gl-matrix';
 import {DrawContext, WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
 import {option, clamp, clampTo, getSpherical} from './cameraUtils';
+import TransformEvent from './TransformEvent';
 
 /**
  * Game camera is similar to the first player games, where user can "walk" insider
@@ -53,24 +54,28 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   inputTarget.addEventListener('mousedown', handleMouseDown);
   document.addEventListener('pointerlockchange', onPointerLockChange, false);
 
+  let transformEvent = new TransformEvent(scene); 
   let frameHandle = 0;
   let vx = 0, vy = 0, vz = 0; // velocity of the panning
   let dx = 0, dy = 0, dz = 0; // actual offset of the panning
   let dPhi = 0, vPhi = 0; // rotation 
   let dIncline = 0, vIncline = 0; // inclination
   let moveSpeed = 0.01; // TODO: Might wanna make this computed based on distance to surface
-
+  let flySpeed = 1e-2;
 
   const api = {
     dispose,
     setViewBox,
     setRotationSpeed,
+    setMoveSpeed(speed: number) {moveSpeed = speed;},
+    setFlySpeed(speed: number) {flySpeed = speed;},
     getRotationSpeed,
-    setMoveSpeed,
-    getMoveSpeed,
+    getMoveSpeed() { return moveSpeed; },
+    getFlySpeed() { return flySpeed; },
     getRadius: () => 1,
-    setSpeed(factor) {
+    setSpeed(factor: number) {
       moveSpeed = factor;
+      flySpeed = factor
     }
   };
   updateMatrix();
@@ -93,7 +98,6 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   }
 
   function onPointerLockChange(e) {
-    console.log('pointer change', document.pointerLockElement)
     if (document.pointerLockElement) {
       document.addEventListener("mousemove", handleMousePositionChange, false);
     } else {
@@ -104,18 +108,11 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   }
 
   function handleMousePositionChange(e) {
-    // dPhi = 0;
-    // vPhi = Math.sign(clampTo(e.movementX, 1, 0));
-    // vIncline = -Math.sign(clampTo(e.movementY, 1, 0))*0.3;
-
-    let ar = drawContext.width / drawContext.height;
-
     let dx = e.movementX;
     let dy = -e.movementY;
     phi -= (rotationSpeed * dx) / drawContext.width;
-    theta -= ((inclinationSpeed * dy) / drawContext.height);// * ar;
+    theta -= ((inclinationSpeed * dy) / drawContext.height);
 
-    // console.log('phi:' +dPhi + '; incline: ' + dIncline + '; mx: ' + e.movementX + '; my: ' + e.movementY)
     updateMatrix();
   }
 
@@ -148,6 +145,12 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
       case 40: // ↓
         vIncline = -isDown;
         break
+      case 16: // Shift
+        vz = -isDown;
+        break;
+      case 32: // space
+        vz = +isDown;
+        break;
     }
     processNextInput();
   }
@@ -179,20 +182,24 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     dz = clampTo(dz * dampFactor + vz, 0.5, 0);
     dPhi = clampTo((dPhi * dampFactor + vPhi/2), Math.PI/360, 0);
     if (dPhi){
-      phi -= 3*(Math.PI * 2 * dPhi) / drawContext.width;
+      phi -= 3*(rotationSpeed * dPhi) / drawContext.width;
       phi = clamp(phi, minPhi, maxPhi);
       needRedraw = true;
     }
     dIncline = clampTo((dIncline * dampFactor + vIncline/6), Math.PI/360, 0);
     if (dIncline) {
       let ar = drawContext.width / drawContext.height;
-      theta -= ((Math.PI * 1.618 * dIncline) / drawContext.height) * ar;
+      theta -= ((inclinationSpeed * dIncline) / drawContext.height) * ar;
       theta = clamp(theta, minTheta, maxTheta);
       needRedraw = true;
     }
 
     if (dx || dy) {
-      panByAbsoluteOffset(dx, dy);
+      moveCenterBy(-dx * moveSpeed, dy * moveSpeed);
+      needRedraw = true;
+    }
+    if (dz) {
+      cameraPosition[2] += dz * flySpeed;
       needRedraw = true;
     }
 
@@ -211,38 +218,25 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
       cameraPosition[2] + lookAtPosition[2],
     );
 
-    let upVectorSphereRadius = Math.hypot(r, 1);
-    //let upVectorTheta = theta - Math.acos(r / upVectorSphereRadius);
-    let upVectorTheta = (theta - Math.PI/2);
-    //if(upVectorTheta < 0) upVectorTheta += Math.PI;
-    //theta - Math.PI/2
-    let upVector0 = getSpherical(1, upVectorTheta, phi + Math.PI);
-    let upVector1 = getSpherical(1, theta, phi);
-    let x = getSpherical(1, theta+1e-3, phi);
-    vec3.cross(x, x, upVector1);
-    vec3.cross(upVector1, x, upVector1);
-    //vec3.cross(upVector1, lookAtPosition, upVector1);
-    vec3.normalize(upVector1, upVector1);
-    //vec3.add(upVector0, upVector0, cameraPosition)
-    // console.log('up angle: ' + Math.round(upVectorTheta * 180 / Math.PI) +
-    //  ' up vector: ' + printVector(upVector0) +
-    //  ' up vector1: ' + printVector(upVector1) +
-    //  ' lookat position: ' + printVector(centerPosition)
-    // );
-    //vec3.normalize(upVector0, upVector0);
-    let upVector = upVector1;
+    // TODO: is there a faster way?
+    let upVector = getSpherical(1, theta, phi);
+    let x = getSpherical(1, theta + 1e-3, phi);
+    vec3.cross(x, x, upVector);
+    vec3.cross(upVector, x, upVector);
+    vec3.normalize(upVector, upVector);
 
     mat4.targetTo(view.matrix, cameraPosition, centerPosition, upVector);
     mat4.getRotation(view.rotation, view.matrix);
+    transformEvent.updated = false;
+    scene.fire('transform', transformEvent);
+    if(transformEvent.updated) {
+      mat4.targetTo(view.matrix, cameraPosition, centerPosition, upVector);
+      mat4.getRotation(view.rotation, view.matrix);
+    }
+
     view.update();
-
     scene.getRoot().scheduleMVPUpdate();
-    scene.fire('transform', drawContext);
     scene.renderFrame();
-  }
-
-  function panByAbsoluteOffset(dx, dy) {
-    moveCenterBy(-dx * moveSpeed, dy * moveSpeed);
   }
 
   function moveCenterBy(dx: number, dy: number) {
@@ -250,8 +244,6 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     let sPhi = Math.sin(phi);
     cameraPosition[0] += cPhi * dy + sPhi * dx;
     cameraPosition[1] += sPhi * dy - cPhi * dx;
-    // cameraPosition[0] += dx;
-    // cameraPosition[1] += dy;
   }
 
   function dispose() {
@@ -268,20 +260,8 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   function getRotationSpeed() {
     return 0; //rotateSpeed;
   }
-
-  function setMoveSpeed(speed) {
-    moveSpeed = speed;
-  }
-
-  function getMoveSpeed() { 
-    return moveSpeed; 
-  }
 }
 
-function isModifierKey(e) {
+function isModifierKey(e: KeyboardEvent) {
   return e.altKey || e.ctrlKey || e.metaKey;
-}
-
-function printVector(v) {
-  return v.map(x => Math.round(x*100)/100).join(',');
 }

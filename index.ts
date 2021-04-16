@@ -9,6 +9,7 @@ export {default as isWebGLEnabled} from './src/isWebGLEnabled';
 export {default as utils} from './src/glUtils';
 export {default as toSVG} from './src/save/svg';
 export {default as createSpaceMapCamera} from './src/createSpaceMapCamera';
+export {default as createGameCamera} from './src/createGameCamera';
 export {default as createGuide} from './src/input/createGuide';
 
 // gl stuff:

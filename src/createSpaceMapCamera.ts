@@ -7,6 +7,7 @@ import createMouseController from './input/createMouseController'
 import {WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
 import {option, clamp, getSpherical} from './cameraUtils';
+import TransformEvent from './TransformEvent';
 
 /**
  * SpaceMap camera is best suited for map-like applications.
@@ -17,6 +18,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
   let rotationSpeed = Math.PI * 2;
   let inclinationSpeed = Math.PI * 1.618;
 
+  let transformEvent = new TransformEvent(scene); 
   let sceneOptions = scene.getOptions() || {};
   let allowRotation = sceneOptions.allowRotation === undefined ? true : !!sceneOptions.allowRotation;
   let allowPinchRotation = sceneOptions.allowPinchRotation === undefined ? allowRotation : !!sceneOptions.allowPinchRotation;
@@ -264,9 +266,14 @@ export default function createSpaceMapCamera(scene: WglScene) {
     mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
     mat4.getRotation(view.rotation, view.matrix);
     view.update();
+    transformEvent.updated = false;
+    scene.fire('transform', transformEvent);
+    if(transformEvent.updated) {
+      mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
+      mat4.getRotation(view.rotation, view.matrix);
+    }
 
     scene.getRoot().scheduleMVPUpdate();
-    scene.fire('transform', drawContext);
     scene.renderFrame();
   }
 }

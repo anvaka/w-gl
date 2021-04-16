@@ -1,6 +1,7 @@
 import WireCollection from "../lines/WireCollection";
 import { WglScene } from "src/createScene";
 import WireAccessor from "src/lines/WireAccessor";
+import { vec3 } from 'gl-matrix';
 
 interface GuidOptions {
   /**
@@ -68,7 +69,6 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
     levelDown['svgInvisible'] = true;
     const drawContext = scene.getDrawContext();
     let center = drawContext.view.center;
-    let r = camera.getRadius()
 
     redraw();
 
@@ -87,7 +87,11 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
     }
 
     function redraw() {
-      r = camera.getRadius()
+      let cameraPosition = scene.getDrawContext().view.position;
+      let dx = cameraPosition[0] - center[0];
+      let dy = cameraPosition[1] - center[1];
+      let dz = cameraPosition[2] - center[2];
+      let r = Math.sqrt(dx * dx + dy * dy + dz * dz);
       let size = r * Math.tan(drawContext.fov / 2);
       let l = Math.log10( size)
       let step = Math.pow(10, Math.floor(l));
@@ -131,6 +135,7 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
 
     let count = 360;
     let center = scene.getDrawContext().view.center;
+    let cameraPosition = scene.getDrawContext().view.position;
     let geometry = new WireCollection(count + 1 , {width: 3, is3D: true, allowColors: true})
     geometry['svgInvisible'] = true
 
@@ -156,7 +161,12 @@ export default function createGuide(scene: WglScene, options: GuidOptions = {}) 
     }
 
     function redraw() {
-      let r = camera.getRadius() * 0.025
+      
+      let dx = cameraPosition[0] - center[0];
+      let dy = cameraPosition[1] - center[1];
+      let dz = cameraPosition[2] - center[2];
+      let r = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      r *= 0.025;
 
       for (let i = 0; i <= count + 1; ++i) {
         let alpha = i/count * 2 * Math.PI;
