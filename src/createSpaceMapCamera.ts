@@ -60,8 +60,6 @@ export default function createSpaceMapCamera(scene: WglScene) {
     allowPinchRotation,
     rotateAnimation,
     panAnimation,
-
-    getRadius,
   };
 
   const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
@@ -74,10 +72,6 @@ export default function createSpaceMapCamera(scene: WglScene) {
 
   return api;
 
-  function getRadius() {
-    return r;
-  }
-
   function setViewBox() {
     cameraPosition = view.position;
     r = Math.hypot(cameraPosition[2]);
@@ -88,6 +82,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
     theta = clamp(0, minTheta, maxTheta);
     phi = clamp(-Math.PI / 2, minPhi, maxPhi);
     redraw();
+    return api;
   }
 
   function dispose() {

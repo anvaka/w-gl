@@ -6,18 +6,22 @@ const {mat4, quat, vec3} = glMatrix;
 
 let upCollection = new WireCollection(10, { width: 4 });
 window.up = upCollection.add({
-  from: {x: 0, y: 0, z: 0, color: 0xff0000ff},
+  from: {x: 0, y: 0, z: 0, color: 0x0000ffff},
   to: {x: 0, y: 0, z: 1, color: 0x0000ffff},
-})
+});
 upCollection.add({
   from: {x: 0, y: 0, z: 0, color: 0xff0000ff},
-  to: {x: 0, y: 1, z: 0, color: 0x00ff00ff},
+  to: {x: 0, y: 1, z: 0, color: 0xff0000ff},
+});
+upCollection.add({
+  from: {x: 0, y: 0, z: 0, color: 0x00ff00ff},
+  to: {x: 1, y: 0, z: 0, color: 0x00ff00ff},
 })
 
 let scene = createScene(document.querySelector('canvas'), {
   createCameraController: createGameCamera
 });
-// drawGraph(scene);
+scene.getCameraController().lookAt([3, 5, 4], [0, 0, 0]);
 // createGuide(scene);
 scene.appendChild(upCollection)
 let someShape1 = drawCube(new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true}));

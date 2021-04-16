@@ -66,17 +66,27 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   const api = {
     dispose,
     setViewBox,
-    setRotationSpeed,
-    setMoveSpeed(speed: number) {moveSpeed = speed;},
-    setFlySpeed(speed: number) {flySpeed = speed;},
-    getRotationSpeed,
-    getMoveSpeed() { return moveSpeed; },
-    getFlySpeed() { return flySpeed; },
-    getRadius: () => 1,
+    lookAt,
+    setRotationSpeed(speed: number) {
+      rotationSpeed = speed;
+      return api;
+    },
+    setMoveSpeed(speed: number) {
+      moveSpeed = speed;
+      return api;
+    },
+    setFlySpeed(speed: number) {
+      flySpeed = speed;
+      return api;
+    },
     setSpeed(factor: number) {
       moveSpeed = factor;
       flySpeed = factor
-    }
+      return api;
+    },
+    getRotationSpeed() { return rotationSpeed; },
+    getMoveSpeed() { return moveSpeed; },
+    getFlySpeed() { return flySpeed; },
   };
   updateMatrix();
   return api;
@@ -111,7 +121,9 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     let dx = e.movementX;
     let dy = -e.movementY;
     phi -= (rotationSpeed * dx) / drawContext.width;
+    phi = clamp(phi, minPhi, maxPhi);
     theta -= ((inclinationSpeed * dy) / drawContext.height);
+    theta = clamp(theta, minTheta, maxTheta);
 
     updateMatrix();
   }
@@ -161,15 +173,13 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   }
 
   function setViewBox(rect) {
-    // const dpr = scene.getPixelRatio();
-    // const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
-    // const {position, rotation} = drawContext.view;
-    // position[0] = (rect.left + rect.right)/2;
-    // position[1] = (rect.top + rect.bottom)/2;
-    // position[2] = nearHeight / Math.tan(drawContext.fov / 2);
-    // quat.set(rotation, 0, 0, 0, 1);
-
-    // drawContext.view.update();
+    const dpr = scene.getPixelRatio();
+    const nearHeight = dpr * Math.max((rect.top - rect.bottom)/2, (rect.right - rect.left) / 2);
+    let x = (rect.left + rect.right)/2;
+    let y = (rect.top + rect.bottom)/2;
+    let z = nearHeight / Math.tan(drawContext.fov / 2);
+    lookAt([x, y, z], [x, y, 0]);
+    return api;
   }
 
   function frame() {
@@ -208,6 +218,25 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
       processNextInput();
     }
   }
+  function lookAt(eye: number[], center: number[]) {
+    let direction = [
+      center[0] - eye[0],
+      center[1] - eye[1],
+      center[2] - eye[2]
+    ];
+    // vec3.copy(centerPosition, center);
+    vec3.copy(cameraPosition, eye);
+    vec3.normalize(direction, direction);
+    
+    let x = direction[0];
+    let y = direction[1];
+    // theta = Math.atan2(y, x);
+    phi = Math.atan2(y,x);
+    theta = Math.atan2(Math.sqrt(x * x + y * y), direction[2]);
+    r = 1;
+    updateMatrix();
+    return api;
+  }
 
   function updateMatrix() {
     let lookAtPosition = getSpherical(r, theta, phi);
@@ -219,8 +248,15 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     );
 
     // TODO: is there a faster way?
-    let upVector = getSpherical(1, theta, phi);
-    let x = getSpherical(1, theta + 1e-3, phi);
+    let upVector: number[], x: number[];
+    let offset = Math.PI/4;
+    if (theta > offset) {
+      upVector = getSpherical(1, theta - offset, phi);
+      x = getSpherical(1, theta, phi);
+    } else {
+      upVector = getSpherical(1, theta, phi);
+      x = getSpherical(1, theta + offset, phi);
+    }
     vec3.cross(x, x, upVector);
     vec3.cross(upVector, x, upVector);
     vec3.normalize(upVector, upVector);
@@ -251,14 +287,6 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     frameHandle = 0;
     inputTarget.removeEventListener('keydown', handleKeyDown);
     inputTarget.removeEventListener('keyup', handleKeyUp);
-  }
-
-  function setRotationSpeed(speed) {
-    let rotateSpeed = speed
-  }
-
-  function getRotationSpeed() {
-    return 0; //rotateSpeed;
   }
 }
 
