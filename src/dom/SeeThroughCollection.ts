@@ -1,5 +1,4 @@
 import {vec3} from 'gl-matrix';
-import { DrawContext } from "src/createScene";
 import defineProgram from "src/gl/defineProgram";
 import GLCollection from "src/GLCollection/GLCollection";
 import DomElement from "./DomElement";

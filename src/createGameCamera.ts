@@ -266,8 +266,9 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     transformEvent.updated = false;
     scene.fire('transform', transformEvent);
     if(transformEvent.updated) {
-      mat4.targetTo(view.matrix, cameraPosition, centerPosition, upVector);
-      mat4.getRotation(view.rotation, view.matrix);
+       // try one more time, as something has changed with the camera position.
+      updateMatrix();
+      return;
     }
 
     view.update();

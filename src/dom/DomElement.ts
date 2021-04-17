@@ -17,8 +17,11 @@ export default class DomElement extends Element {
     this.lastTransform = '';
 
     this.el = document.createElement('div');
-    this.el.style.position = 'absolute';
-    this.el.style.pointerEvents = 'initial';
+    let style = this.el.style;
+    style.position = 'absolute';
+    style.pointerEvents = 'initial';
+    // style.transformStyle = 'preserve-3d';
+    // style.backfaceVisibility = 'hidden';
     if (customStyle) {
       let ourStyle = this.el.style;
       Object.keys(customStyle).forEach(key => {
