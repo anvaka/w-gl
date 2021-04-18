@@ -145,9 +145,11 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
       case 83: // s
         vy = -isDown;
         break;
+      case 81: // q 
       case 37: // ←
         vPhi = -isDown;
         break;
+      case 69: // e
       case 39: // →
         vPhi = +isDown;
         break;

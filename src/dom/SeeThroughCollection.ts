@@ -91,9 +91,12 @@ export class SeeThroughCollection extends GLCollection {
       if (!movedUI) {
         throw new Error('Cannot find moved vertex ui');
       }
-      // the vertex now lives on this location:
-      movedUI.uiId = oldUI;
-      this.uiIDToUI.set(oldUI, movedUI);
+      this.uiIDToUI.delete(newUI);
+      if (newUI !== oldUI) {
+        // the vertex now lives on this location:
+        movedUI.uiId = oldUI;
+        this.uiIDToUI.set(oldUI, movedUI);
+      }
     });
 
     // Clean up
