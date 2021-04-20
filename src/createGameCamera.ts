@@ -109,9 +109,9 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
 
   function onPointerLockChange(e) {
     if (document.pointerLockElement) {
-      document.addEventListener("mousemove", handleMousePositionChange, false);
+      document.addEventListener('mousemove', handleMousePositionChange, false);
     } else {
-      document.removeEventListener("mousemove", handleMousePositionChange, false);
+      document.removeEventListener('mousemove', handleMousePositionChange, false);
       dPhi = 0;
       dIncline = 0;
     }
@@ -290,6 +290,10 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     frameHandle = 0;
     inputTarget.removeEventListener('keydown', handleKeyDown);
     inputTarget.removeEventListener('keyup', handleKeyUp);
+    inputTarget.removeEventListener('mousedown', handleMouseDown);
+
+    document.removeEventListener('mousemove', handleMousePositionChange, false);
+    document.removeEventListener('pointerlockchange', onPointerLockChange, false);
   }
 }
 

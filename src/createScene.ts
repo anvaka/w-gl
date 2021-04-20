@@ -321,6 +321,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
       cameraController.dispose();
     }
     cameraController = createCamera(api, drawContext);
+    return cameraController;
   }
 
   function getCameraController() {
