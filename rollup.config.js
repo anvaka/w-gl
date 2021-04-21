@@ -13,7 +13,7 @@ console.log('path ',
 const banner =
   '/*!\n' +
   ' * wgl v' + version + '\n' +
-  ' * (c) 2017-2020 Andrei Kashcha.\n' +
+  ' * (c) 2017-2021 Andrei Kashcha.\n' +
   ' * Released under the MIT License.\n' +
   ' */'
 export default {
