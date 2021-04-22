@@ -343,7 +343,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
 
   function listenToEvents() {
     inputTarget.addEventListener('mousemove', onMouseMove);
-    disposeClick = onClap(canvas, onMouseClick);
+    disposeClick = onClap(inputTarget, onMouseClick);
     window.addEventListener('resize', onResize, true);
   }
 
