@@ -46,6 +46,7 @@ export default class DomContainer extends Element {
 
   bound: boolean;
   seeThrough: boolean;
+  lastCameraTransform: string;
 
   seeThroughQuads?: SeeThroughCollection;
 
@@ -62,6 +63,7 @@ export default class DomContainer extends Element {
     this.container.appendChild(this.camera);
     this.container.style.pointerEvents = 'none';
     this.bound = false;
+    this.lastCameraTransform = ''
 
     this.seeThrough = (options && (typeof options.seeThrough !== 'undefined')) ?
       options.seeThrough : false;
@@ -129,15 +131,18 @@ export default class DomContainer extends Element {
     let fov = drawContext.projection[5] * drawContext.height / (2 * drawContext.pixelRatio);
     let pixelRatioIndependentWidth = drawContext.width / drawContext.pixelRatio;
     let pixelRatioIndependentHeight = drawContext.height / drawContext.pixelRatio;
-    let cameraCSSMatrix = 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(drawContext.view.matrix);
+    let cameraTransform = 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(drawContext.view.matrix) + 
+              'translate(' + (pixelRatioIndependentWidth/2) + 'px,' + (pixelRatioIndependentHeight /2) + 'px)';
+    if (this.lastCameraTransform != cameraTransform) {
+      this.lastCameraTransform = cameraTransform;
+      this.camera.style.transform = this.lastCameraTransform;
+      this.camera.style.width = pixelRatioIndependentWidth + 'px';
+      this.camera.style.height = pixelRatioIndependentHeight + 'px';
 
-    this.camera.style.transform = cameraCSSMatrix + 'translate(' + (pixelRatioIndependentWidth/2) + 'px,' + (pixelRatioIndependentHeight /2) + 'px)';
-    this.camera.style.width = pixelRatioIndependentWidth + 'px';
-    this.camera.style.height = pixelRatioIndependentHeight + 'px';
-
-    this.container.style.width = pixelRatioIndependentWidth + 'px';
-    this.container.style.height = pixelRatioIndependentHeight + 'px';
-    this.container.style.perspective = fov + 'px';
+      this.container.style.width = pixelRatioIndependentWidth + 'px';
+      this.container.style.height = pixelRatioIndependentHeight + 'px';
+      this.container.style.perspective = fov + 'px';
+    }
   }
 }
 

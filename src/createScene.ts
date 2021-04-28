@@ -229,6 +229,9 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
   let hasMouseMoveListeners = false;
   let inputTarget: HTMLElement = getInputTarget(options.inputTarget, canvas);
 
+  // Keeping canvas rect in memory to speed things up
+  let canvasRect: DOMRect;
+
   let view = new ViewMatrix();
   let projection = mat4.create();
   let inverseProjection = mat4.create();
@@ -376,6 +379,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
       width = canvas.width = canvas.offsetWidth * pixelRatio;
       height = canvas.height = canvas.offsetHeight * pixelRatio;
     }
+    canvasRect = canvas.getBoundingClientRect()
 
     gl.viewport(0, 0, width, height);
 
@@ -416,11 +420,8 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
   }
 
   function getSceneCoordinate(clientX: number, clientY: number) {
-    // TODO: This is not optimized by any means.
-    // todo: cache canvas size?
-    let rect = canvas.getBoundingClientRect()
-    clientX -= rect.left;
-    clientY -= rect.top;
+    clientX -= canvasRect.left;
+    clientY -= canvasRect.top;
     var dpr = api.getPixelRatio();
     let clipSpaceX = (dpr * clientX / width) * 2 - 1;
     let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
@@ -465,18 +466,18 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     return {x, y};
   }
 
-  function setViewBox(rect: Rectangle) {
+  function setViewBox(canvasRect: Rectangle) {
     const dpr = drawContext.pixelRatio;
-    const nearHeight = dpr * Math.max((rect.top - rect.bottom) / 2, (rect.right - rect.left) / 2);
+    const nearHeight = dpr * Math.max((canvasRect.top - canvasRect.bottom) / 2, (canvasRect.right - canvasRect.left) / 2);
     const {position, rotation} = drawContext.view;
-    position[0] = (rect.left + rect.right)/2;
-    position[1] = (rect.top + rect.bottom)/2;
+    position[0] = (canvasRect.left + canvasRect.right)/2;
+    position[1] = (canvasRect.top + canvasRect.bottom)/2;
     position[2] = nearHeight / Math.tan(drawContext.fov / 2);
     quat.set(rotation as unknown as vec4, 0, 0, 0, 1);
 
     drawContext.view.update();
     if (cameraController.setViewBox) {
-      cameraController.setViewBox(rect)
+      cameraController.setViewBox(canvasRect)
     }
   }
 

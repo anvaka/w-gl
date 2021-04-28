@@ -66,6 +66,7 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   const api = {
     dispose,
     setViewBox,
+    getUpVector,
     lookAt,
     setRotationSpeed(speed: number) {
       rotationSpeed = speed;
@@ -238,6 +239,33 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
     r = 1;
     updateMatrix();
     return api;
+  }
+
+  function getUpVector() {
+    let lookAtPosition = getSpherical(r, theta, phi);
+
+    vec3.set(
+      centerPosition,
+      cameraPosition[0] + lookAtPosition[0],
+      cameraPosition[1] + lookAtPosition[1],
+      cameraPosition[2] + lookAtPosition[2],
+    );
+
+    // TODO: is there a faster way?
+    let upVector: number[], x: number[];
+    let offset = Math.PI/4;
+
+    if (theta > offset) {
+      upVector = getSpherical(1, theta - offset, phi);
+      x = getSpherical(1, theta, phi);
+    } else {
+      upVector = getSpherical(1, theta, phi);
+      x = getSpherical(1, theta + offset, phi);
+    }
+    vec3.cross(x, x, upVector);
+    vec3.cross(upVector, x, upVector);
+    vec3.normalize(upVector, upVector);
+    return upVector;
   }
 
   function updateMatrix() {
