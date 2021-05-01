@@ -150,7 +150,7 @@ export interface WglScene extends EventedType {
    * Given `clientX` and `clientY` of a mouse coordinate, return corresponding coordinate
    * in the rendered world.
    */
-  getSceneCoordinate(clientX: number, clientY: number): SceneCoordinate;
+  getSceneCoordinate(clientX: number, clientY: number): vec3;
 
   /**
    * Appends a new child to the scene
@@ -414,9 +414,9 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
 
     api.fire('mousemove', {
       originalEvent: e,
-      x: p.x,
-      y: p.y,
-      z: p.z,
+      x: p[0],
+      y: p[1],
+      z: p[2],
     });
   }
 
@@ -427,32 +427,22 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     let clipSpaceX = (dpr * clientX / width) * 2 - 1;
     let clipSpaceY = (1 - dpr * clientY / height) * 2 - 1;
 
-    let spare: vec4 = [0, 0, 0, 0];
-    let mx = vec4.transformMat4(spare, [clipSpaceX, clipSpaceY, 0, 1], inverseProjection);
-    mx[0] /= mx[3]; mx[1] /= mx[3]; mx[2] /= mx[3]; mx[3] /= mx[3];
-    vec4.transformMat4(mx, mx, view.cameraWorld);
+    let spare: vec3 = [0, 0, 0];
+    let mx = vec3.transformMat4(spare, [clipSpaceX, clipSpaceY, 0], inverseProjection);
+    vec3.transformMat4(mx, mx, view.cameraWorld);
 
     vec3.sub(mx, mx, view.position);
     vec3.normalize(mx, mx);
-    // let l = Math.hypot(mx[0], mx[1], mx[2]);
-    // mx[0] /= l; mx[1] /= l; mx[2] /= l;
     var targetZ = 0;
 
     // TODO: This is likely not going to work for all cases.
     var distance = (targetZ - view.position[2]) / mx[2];
     if (mx[2] > 0) {
       // ray shoots backwards.
-
     }
 
-    vec4.scaleAndAdd(mx, view.position as vec4, mx, distance)
-
-    // TODO: Return mx?
-    return {
-      x: mx[0],
-      y: mx[1],
-      z: mx[2]
-    }
+    vec3.scaleAndAdd(mx, view.position, mx, distance)
+    return mx; 
   }
 
   function getClientCoordinate(sceneX: number, sceneY: number, sceneZ = 0) {

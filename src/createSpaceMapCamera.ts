@@ -95,8 +95,7 @@ export default function createSpaceMapCamera(scene: WglScene) {
 
   function getZoomPlaneIntersection(clientX: number, clientY: number) {
     let viewPoint = scene.getSceneCoordinate(clientX, clientY);
-    let spare: vec3 = [0, 0, 0];
-    let ray = vec3.sub(spare, [viewPoint.x, viewPoint.y, viewPoint.z], cameraPosition);
+    let ray = vec3.sub(viewPoint, viewPoint, cameraPosition);
     vec3.normalize(ray, ray);
 
     let denom = vec3.dot(planeNormal, ray);
