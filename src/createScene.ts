@@ -135,6 +135,7 @@ export interface DrawContext {
   pixelRatio: number;
   canvas: HTMLCanvasElement;
   projection: mat4;
+  inverseProjection: mat4,
   view: ViewMatrix;
 }
 
@@ -245,6 +246,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     pixelRatio,
     canvas,
     projection,
+    inverseProjection,
     view,
     fov,
  };
@@ -387,8 +389,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     drawContext.height = height;
     sceneRoot.worldTransformNeedsUpdate = true;
     mat4.perspective(projection, fov, width/height, near, far);
-
-    inverseProjection = mat4.invert(mat4.create(), projection);
+    mat4.invert(inverseProjection, projection);
     renderFrame();
   }
 
