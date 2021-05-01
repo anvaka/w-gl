@@ -8,11 +8,11 @@ import TransformEvent from './TransformEvent';
  * Game camera is similar to the first player games, where user can "walk" insider
  * the world and look around.
  */
-export default function createGameCamera(scene: WglScene, drawContext: DrawContext) {
+export default function createGameCamera(scene: WglScene) {
   // Very likely spaceMap camera can be adjusted to support this navigation model too, but
   // for now, I'm using a separate camera. Should consider uniting them in the future if possible.
-
-  let {view} = scene.getDrawContext();
+  const drawContext = scene.getDrawContext();
+  let {view} = drawContext;
 
   // Player in the world is placed where the camera is:
   let cameraPosition = view.position;
@@ -26,6 +26,7 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   let sceneOptions = scene.getOptions() || {};
   // Pay attention: These are not the same as in the space map:
   // angle of rotation around Z axis, tracked from axis X to axis Y
+  // Z axis looking up.
   let minPhi = option(sceneOptions.minPhi, -Infinity);
   let maxPhi = option(sceneOptions.maxPhi, Infinity);
   // Rotate the camera so it looks on Y axis
@@ -44,6 +45,9 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   let maxR = option(sceneOptions.maxZoom, Infinity);
   let r = clamp(1, minR, maxR);
 
+  let lockMouse = false; // whether rotation is done via locked mouse
+  let mouseX: number, mouseY: number;
+
   const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
   inputTarget.style.outline = 'none';
   if (!inputTarget.getAttribute('tabindex')) {
@@ -52,6 +56,7 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   inputTarget.addEventListener('keydown', handleKeyDown);
   inputTarget.addEventListener('keyup', handleKeyUp);
   inputTarget.addEventListener('mousedown', handleMouseDown);
+
   document.addEventListener('pointerlockchange', onPointerLockChange, false);
 
   let transformEvent = new TransformEvent(scene); 
@@ -101,11 +106,35 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   }
 
   function handleMouseDown(e){
+    if (e.which !== 1) return; // only left button works here.
+
     if (document.pointerLockElement) {
       document.exitPointerLock();
-    } else{
+    } else if (lockMouse) {
       inputTarget.requestPointerLock();
+    } else {
+      inputTarget.focus();
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      e.preventDefault();
     }
+  }
+
+  function onMouseMove(e) {
+    let dy = e.clientY - mouseY;
+    let dx = e.clientX - mouseX;
+    updateLookAtByOffset(-dx, dy);
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    e.preventDefault();
+  }
+
+  function onMouseUp(e) {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
   }
 
   function onPointerLockChange(e) {
@@ -119,18 +148,23 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
   }
 
   function handleMousePositionChange(e) {
-    let dx = e.movementX;
-    let dy = -e.movementY;
+    updateLookAtByOffset(e.movementX, -e.movementY)
+  }
+
+  function updateLookAtByOffset(dx, dy) {
     phi -= (rotationSpeed * dx) / drawContext.width;
     phi = clamp(phi, minPhi, maxPhi);
     theta -= ((inclinationSpeed * dy) / drawContext.height);
     theta = clamp(theta, minTheta, maxTheta);
-
     updateMatrix();
   }
 
   function onKey(e: KeyboardEvent, isDown: number) {
-    if (isModifierKey(e)) return;
+    if (isModifierKey(e)) {
+      // remove the move down if modifier was pressed after shift
+      vz = 0;
+      return;
+    }
 
     // TODO: implement plane move on the z up/down?
     switch (e.which) {
@@ -322,6 +356,8 @@ export default function createGameCamera(scene: WglScene, drawContext: DrawConte
 
     document.removeEventListener('mousemove', handleMousePositionChange, false);
     document.removeEventListener('pointerlockchange', onPointerLockChange, false);
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
   }
 }
 

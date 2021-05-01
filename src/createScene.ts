@@ -285,7 +285,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
 
   sceneRoot.bindScene(api);
 
-  let cameraController = (options.createCameraController || createSpaceMapCamera)(api, drawContext);
+  let cameraController = (options.createCameraController || createSpaceMapCamera)(api);
 
   let disposeClick: Function;
 
@@ -400,9 +400,9 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
 
     api.fire('click', {
       originalEvent: e,
-      x: p.x,
-      y: p.y,
-      z: p.z
+      x: p[0],
+      y: p[1],
+      z: p[2]
     })
   }
 
