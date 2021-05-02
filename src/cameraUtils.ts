@@ -11,7 +11,7 @@ export function clamp(v: number, min: number, max: number) {
   return v;
 }
 
-export function option(value: number | undefined, fallback: number) {
+export function option<T>(value: T | undefined, fallback: T) {
   if (value === undefined) return fallback;
   return value;
 }

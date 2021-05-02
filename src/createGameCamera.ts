@@ -3,6 +3,7 @@ import {DrawContext, WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
 import {option, clamp, clampTo, getSpherical} from './cameraUtils';
 import TransformEvent from './TransformEvent';
+import eventify from 'ngraph.events';
 
 /**
  * Game camera is similar to the first player games, where user can "walk" insider
@@ -45,7 +46,7 @@ export default function createGameCamera(scene: WglScene) {
   let maxR = option(sceneOptions.maxZoom, Infinity);
   let r = clamp(1, minR, maxR);
 
-  let lockMouse = false; // whether rotation is done via locked mouse
+  let lockMouse = option(sceneOptions.lockMouse, false); // whether rotation is done via locked mouse
   let mouseX: number, mouseY: number;
 
   const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
@@ -65,11 +66,26 @@ export default function createGameCamera(scene: WglScene) {
   let dx = 0, dy = 0, dz = 0; // actual offset of the panning
   let dPhi = 0, vPhi = 0; // rotation 
   let dIncline = 0, vIncline = 0; // inclination
+  let moveState = {
+    dx, dy, dz, dPhi, dIncline
+  };
   let moveSpeed = 0.01; // TODO: Might wanna make this computed based on distance to surface
   let flySpeed = 1e-2;
 
   const api = {
+    MOVE_FORWARD:  1,
+    MOVE_BACKWARD: 2,
+    MOVE_LEFT:  3,
+    MOVE_RIGHT: 4,
+    MOVE_UP:    5,
+    MOVE_DOWN:  6,
+    TURN_LEFT:  7,
+    TURN_RIGHT: 8,
+    TURN_UP:    9,
+    TURN_DOWN:  10,
+
     dispose,
+    handleCommand,
     setViewBox,
     getUpVector,
     lookAt,
@@ -93,7 +109,26 @@ export default function createGameCamera(scene: WglScene) {
     getRotationSpeed() { return rotationSpeed; },
     getMoveSpeed() { return moveSpeed; },
     getFlySpeed() { return flySpeed; },
+    getKeymap() { return keyMap; }
   };
+
+  const keyMap = {
+    /* W */ 87: api.MOVE_FORWARD,
+    /* A */ 65: api.MOVE_LEFT,
+    /* S */ 83: api.MOVE_BACKWARD,
+    /* D */ 68: api.MOVE_RIGHT,
+    /* Q */ 81: api.TURN_LEFT,
+    /* ← */ 37: api.TURN_LEFT,
+    /* E */ 69: api.TURN_RIGHT,
+    /* → */ 39: api.TURN_RIGHT,
+    /* ↑ */ 38: api.TURN_UP,
+    /* ↓ */ 40: api.TURN_DOWN,
+/* Shift */ 16: api.MOVE_DOWN,
+/* Space */ 32: api.MOVE_UP
+  };
+
+  eventify(api);
+
   updateMatrix();
   return api;
 
@@ -126,7 +161,7 @@ export default function createGameCamera(scene: WglScene) {
   function onMouseMove(e) {
     let dy = e.clientY - mouseY;
     let dx = e.clientX - mouseX;
-    updateLookAtByOffset(-dx, dy);
+    updateLookAtByOffset(dx, dy);
     mouseX = e.clientX;
     mouseY = e.clientY;
     e.preventDefault();
@@ -165,42 +200,39 @@ export default function createGameCamera(scene: WglScene) {
       vz = 0;
       return;
     }
+    let command = keyMap[e.which];
+    if (command) handleCommand(command, isDown)
+  }
 
-    // TODO: implement plane move on the z up/down?
-    switch (e.which) {
-      case 87: // w
-        vy = isDown;
-        break;
-      case 65: // a
-        vx = isDown;
-        break;
-      case 68: // d
-        vx = -isDown;
-        break;
-      case 83: // s
-        vy = -isDown;
-        break;
-      case 81: // q 
-      case 37: // ←
-        vPhi = -isDown;
-        break;
-      case 69: // e
-      case 39: // →
-        vPhi = +isDown;
-        break;
-      case 38: // ↑
-        vIncline = isDown;
-        break;
-      case 40: // ↓
-        vIncline = -isDown;
-        break
-      case 16: // Shift
-        vz = -isDown;
-        break;
-      case 32: // space
-        vz = +isDown;
-        break;
+  function handleCommand(commandId, value: number) {
+    switch (commandId) {
+      case api.MOVE_FORWARD:
+        vy = value; break;
+      case api.MOVE_BACKWARD:
+        vy = -value; break;
+      case api.MOVE_LEFT:
+        vx = value; break;
+      case api.MOVE_RIGHT:
+        vx = -value; break;
+      case api.MOVE_UP:
+        vz = value; break;
+      case api.MOVE_DOWN:
+        vz = -value; break;
+
+      case api.TURN_LEFT:
+        vPhi = -value; break;
+      case api.TURN_RIGHT:
+        vPhi = value; break;
+      case api.TURN_UP:
+        vIncline = value; break;
+      case api.TURN_DOWN:
+        vIncline = -value; break;
+
+      default: {
+        throw new Error('Unknown command ' + commandId);
+      }
     }
+
     processNextInput();
   }
 
@@ -254,7 +286,11 @@ export default function createGameCamera(scene: WglScene) {
       updateMatrix();
       processNextInput();
     }
+    moveState.dx = dx; moveState.dy = dy; moveState.dz = dz;
+    moveState.dPhi = dPhi; moveState.dIncline = dIncline;
+    (api as any).fire('move', moveState);
   }
+
   function lookAt(eye: number[], center: number[]) {
     let direction = [
       center[0] - eye[0],

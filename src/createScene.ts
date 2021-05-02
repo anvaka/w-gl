@@ -118,11 +118,13 @@ type WGLSceneOptions = {
   maxZoom?: number;
 
   /**
-   * Don't use this - this is experimental bit.
+   * Don't use these - this can change
    */
-  camera?: any
+  camera?: any;
 
-  createCameraController?: any
+  createCameraController?: any;
+
+  lockMouse?: boolean;
 }
 
 /**
