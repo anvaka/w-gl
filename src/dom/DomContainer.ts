@@ -85,9 +85,9 @@ export default class DomContainer extends Element {
         this.container.parentElement.removeChild(this.container);
       }
       this.bound = false;
-      if (this.seeThroughQuads) {
+      if (this.seeThroughQuads && this.seeThroughQuads.parent) {
         // TODO: need better dispose logic here.
-        this.removeChild(this.seeThroughQuads);
+        this.seeThroughQuads.parent.removeChild(this.seeThroughQuads);
       }
     }
     super.bindScene(scene);
