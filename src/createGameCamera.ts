@@ -1,5 +1,5 @@
 import {vec3, mat4} from 'gl-matrix';
-import {DrawContext, WglScene} from './createScene';
+import {WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
 import {option, clamp, clampTo, getSpherical} from './cameraUtils';
 import TransformEvent from './TransformEvent';
@@ -39,7 +39,7 @@ export default function createGameCamera(scene: WglScene) {
   // PI/2 so that we are in XY plane
   let theta = clamp(Math.PI/2, minTheta, maxTheta);
 
-  let rotationSpeed = Math.PI * 2;
+  let rotationSpeed = Math.PI;
   let inclinationSpeed = Math.PI * 1.618;
   // Distance to the point at which our camera is looking
   let minR = option(sceneOptions.minZoom, -Infinity);
@@ -89,27 +89,16 @@ export default function createGameCamera(scene: WglScene) {
     setViewBox,
     getUpVector,
     lookAt,
-    setRotationSpeed(speed: number) {
-      rotationSpeed = speed;
-      return api;
-    },
-    setMoveSpeed(speed: number) {
-      moveSpeed = speed;
-      return api;
-    },
-    setFlySpeed(speed: number) {
-      flySpeed = speed;
-      return api;
-    },
-    setSpeed(factor: number) {
-      moveSpeed = factor;
-      flySpeed = factor
-      return api;
-    },
+    setMouseCapture(isLocked: boolean) { lockMouse = isLocked; return api; },
+    setRotationSpeed(speed: number) { rotationSpeed = speed; return api; },
+    setMoveSpeed(speed: number) { moveSpeed = speed; return api; },
+    setFlySpeed(speed: number) { flySpeed = speed; return api; },
+    setSpeed(factor: number) { moveSpeed = factor; flySpeed = factor; return api; },
     getRotationSpeed() { return rotationSpeed; },
     getMoveSpeed() { return moveSpeed; },
     getFlySpeed() { return flySpeed; },
-    getKeymap() { return keyMap; }
+    getKeymap() { return keyMap; },
+    getMouseCapture() { return lockMouse; }
   };
 
   const keyMap = {
@@ -161,7 +150,7 @@ export default function createGameCamera(scene: WglScene) {
   function onMouseMove(e) {
     let dy = e.clientY - mouseY;
     let dx = e.clientX - mouseX;
-    updateLookAtByOffset(dx, dy);
+    updateLookAtByOffset(-dx, dy);
     mouseX = e.clientX;
     mouseY = e.clientY;
     e.preventDefault();
