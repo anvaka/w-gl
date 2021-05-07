@@ -10,10 +10,13 @@ const zAxis = [0, 0, 1];
  * View matrix allows you to place camera anywhere in the world
  */
 export default class ViewMatrix {
+  /**
+   * This is our view matrix
+   */
   matrix: mat4;
 
   /**
-   * LookAt matrix of the camera.
+   * Inverse of the view matrix
    */
   cameraWorld: mat4;
 
