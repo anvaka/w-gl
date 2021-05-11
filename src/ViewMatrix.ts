@@ -26,9 +26,9 @@ export default class ViewMatrix {
   position: vec3;
 
   /**
-   * Camera rotation in the world
+   * Camera orientation in the world
    */
-  rotation: quat;
+  orientation: quat;
 
   /**
    * Where the camera is looking
@@ -41,7 +41,7 @@ export default class ViewMatrix {
     this.cameraWorld = mat4.invert(mat4.create(), this.matrix);
 
     this.position = [0, 0, 0];
-    this.rotation = [0, 0, 0, 1];
+    this.orientation = [0, 0, 0, 1];
     this.center = [0, 0, 0];
 
     this.deconstructPositionRotation();
@@ -58,18 +58,18 @@ export default class ViewMatrix {
   }
 
   update() {
-    mat4.fromRotationTranslation(this.cameraWorld, this.rotation, this.position);
+    mat4.fromRotationTranslation(this.cameraWorld, this.orientation, this.position);
     mat4.invert(this.matrix, this.cameraWorld);
     return this;
   }
 
   deconstructPositionRotation() {
     mat4.getTranslation(this.position, this.cameraWorld);
-    mat4.getRotation(this.rotation, this.cameraWorld);
+    mat4.getRotation(this.orientation, this.cameraWorld);
   }
 
   translateOnAxis(axis: number[], distance: number) {
-    let translation = vec3.transformQuat(spareVec3, axis as unknown as Float32Array, this.rotation);
+    let translation = vec3.transformQuat(spareVec3, axis as unknown as Float32Array, this.orientation);
     vec3.scaleAndAdd(this.position, this.position, translation, distance);
     return this;
   } 

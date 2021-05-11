@@ -258,13 +258,13 @@ export default function createSpaceMapCamera(scene: WglScene) {
 
     // I'd assume this could be simplified? I just don't know and haven't thought yet how:
     mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
-    mat4.getRotation(view.rotation, view.matrix);
+    mat4.getRotation(view.orientation, view.matrix);
     view.update();
     transformEvent.updated = false;
     scene.fire('transform', transformEvent);
     if(transformEvent.updated) {
       mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
-      mat4.getRotation(view.rotation, view.matrix);
+      mat4.getRotation(view.orientation, view.matrix);
     }
 
     scene.getRoot().scheduleMVPUpdate();

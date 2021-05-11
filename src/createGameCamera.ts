@@ -183,7 +183,7 @@ export default function createGameCamera(scene: WglScene) {
       // (Z points towards us, so take one step in negative direction of Z
       // https://developers.google.com/web/fundamentals/native-hardware/device-orientation#device_coordinate_frame )
       let deviceFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], q));
-      let cameraFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], view.rotation));
+      let cameraFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], view.orientation));
       let angle = -Math.acos(vec3.dot(deviceFront, cameraFront))/2;
       sceneRotationAdjustment = [0, 0, Math.sin(angle), Math.cos(angle)];
     }
@@ -196,7 +196,7 @@ export default function createGameCamera(scene: WglScene) {
     let s = [0, 0, Math.sin(screenAngle), Math.cos(screenAngle)];
     quat.mul(q, q, s);
      // account for difference between lookAt and device orientation:
-    quat.mul(view.rotation, sceneRotationAdjustment, q);
+    quat.mul(view.orientation, sceneRotationAdjustment, q);
 
     commitMatrixChanges();
   }
@@ -319,7 +319,7 @@ export default function createGameCamera(scene: WglScene) {
     vec3.set(centerPosition, center[0], center[1], center[2]);
 
     mat4.targetTo(view.cameraWorld, cameraPosition, centerPosition, upVector);
-    mat4.getRotation(view.rotation, view.cameraWorld);
+    mat4.getRotation(view.orientation, view.cameraWorld);
     mat4.invert(view.matrix, view.cameraWorld);
     return api;
   }
@@ -347,15 +347,15 @@ export default function createGameCamera(scene: WglScene) {
 
   function rotateBy(yaw, pitch) {
     // Note order here is important: https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up/30669
-    if (yaw) quat.mul(view.rotation, quat.setAxisAngle([], [0, 0, 1], yaw), view.rotation);
-    if (pitch) quat.mul(view.rotation, view.rotation, quat.setAxisAngle([], [1, 0, 0], pitch));
+    if (yaw) quat.mul(view.orientation, quat.setAxisAngle([], [0, 0, 1], yaw), view.orientation);
+    if (pitch) quat.mul(view.orientation, view.orientation, quat.setAxisAngle([], [1, 0, 0], pitch));
   }
 
   function moveCenterBy(dx: number, dy: number) {
     // TODO: this slow downs when camera looks directly down.
     // The `dy` is in `z` coordinate, because we are working with view matrix rotations
     // where z axis is going from the screen towards the viewer
-    let delta = vec3.transformQuat([], [-dx, 0, -dy], view.rotation);
+    let delta = vec3.transformQuat([], [-dx, 0, -dy], view.orientation);
     cameraPosition[0] += delta[0];
     cameraPosition[1] += delta[1];
   }

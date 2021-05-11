@@ -462,11 +462,11 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
   function setViewBox(canvasRect: Rectangle) {
     const dpr = drawContext.pixelRatio;
     const nearHeight = dpr * Math.max((canvasRect.top - canvasRect.bottom) / 2, (canvasRect.right - canvasRect.left) / 2);
-    const {position, rotation} = drawContext.view;
+    const {position, orientation} = drawContext.view;
     position[0] = (canvasRect.left + canvasRect.right)/2;
     position[1] = (canvasRect.top + canvasRect.bottom)/2;
     position[2] = nearHeight / Math.tan(drawContext.fov / 2);
-    quat.set(rotation as unknown as vec4, 0, 0, 0, 1);
+    quat.set(orientation as unknown as vec4, 0, 0, 0, 1);
 
     drawContext.view.update();
     if (cameraController.setViewBox) {
