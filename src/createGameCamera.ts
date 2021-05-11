@@ -1,4 +1,4 @@
-import {vec3, mat4} from 'gl-matrix';
+import {vec3,  quat, mat4} from 'gl-matrix';
 import {WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
 import {option, clamp, clampTo, getSpherical} from './cameraUtils';
@@ -21,30 +21,12 @@ export default function createGameCamera(scene: WglScene) {
   // And they look at the "center" of the scene:
   let centerPosition = view.center;
 
-  // The camera itself is modeled via spherical coordinates, where player is at the center
-  // of the sphere, and looks at the point on the sphere (inverse model of space-map camera)
-
+  // The camera follows "FPS" mode, but implemented on quaternions.
   let sceneOptions = scene.getOptions() || {};
-  // Pay attention: These are not the same as in the space map:
-  // angle of rotation around Z axis, tracked from axis X to axis Y
-  // Z axis looking up.
-  let minPhi = option(sceneOptions.minPhi, -Infinity);
-  let maxPhi = option(sceneOptions.maxPhi, Infinity);
-  // Rotate the camera so it looks on Y axis
-  let phi = clamp(0, minPhi, maxPhi);
-
-  // camera inclination angle. (Angle above Oxy plane)
-  let minTheta = option(sceneOptions.minTheta, 0);
-  let maxTheta = option(sceneOptions.maxTheta, Math.PI);
-  // PI/2 so that we are in XY plane
-  let theta = clamp(Math.PI/2, minTheta, maxTheta);
+  const upVector = [0, 0, 1];
 
   let rotationSpeed = Math.PI;
   let inclinationSpeed = Math.PI * 1.618;
-  // Distance to the point at which our camera is looking
-  let minR = option(sceneOptions.minZoom, -Infinity);
-  let maxR = option(sceneOptions.maxZoom, Infinity);
-  let r = clamp(1, minR, maxR);
 
   let lockMouse = option(sceneOptions.lockMouse, false); // whether rotation is done via locked mouse
   let mouseX: number, mouseY: number;
@@ -60,18 +42,20 @@ export default function createGameCamera(scene: WglScene) {
 
   document.addEventListener('pointerlockchange', onPointerLockChange, false);
 
+  // TODO: Extract device orientation handling into own class.
+  window.addEventListener('deviceorientationabsolute', onDeviceOrientationChange, true);
+  
   let transformEvent = new TransformEvent(scene); 
   let frameHandle = 0;
   let vx = 0, vy = 0, vz = 0; // velocity of the panning
   let dx = 0, dy = 0, dz = 0; // actual offset of the panning
   let dPhi = 0, vPhi = 0; // rotation 
   let dIncline = 0, vIncline = 0; // inclination
-  let moveState = {
-    dx, dy, dz, dPhi, dIncline
-  };
+  let moveState = {dx, dy, dz, dPhi, dIncline};
   let moveSpeed = 0.01; // TODO: Might wanna make this computed based on distance to surface
   let flySpeed = 1e-2;
 
+  let sceneRotationAdjustment: [number, number, number, number];
   const api = {
     MOVE_FORWARD:  1,
     MOVE_BACKWARD: 2,
@@ -117,8 +101,6 @@ export default function createGameCamera(scene: WglScene) {
   };
 
   eventify(api);
-
-  updateMatrix();
   return api;
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -175,12 +157,71 @@ export default function createGameCamera(scene: WglScene) {
     updateLookAtByOffset(e.movementX, -e.movementY)
   }
 
-  function updateLookAtByOffset(dx, dy) {
-    phi -= (rotationSpeed * dx) / drawContext.width;
-    phi = clamp(phi, minPhi, maxPhi);
-    theta -= ((inclinationSpeed * dy) / drawContext.height);
-    theta = clamp(theta, minTheta, maxTheta);
-    updateMatrix();
+  function updateLookAtByOffset(dx: number, dy: number) {
+    let dYaw = -(rotationSpeed * dx) / drawContext.width;
+    let dPitch = (inclinationSpeed * dy) / drawContext.height;
+    rotateBy(dYaw, dPitch);
+    commitMatrixChanges();
+  }
+
+  function onDeviceOrientationChange(e: DeviceOrientationEvent) {
+    const {alpha, beta, gamma} = e;
+    if (e.absolute && alpha === null && beta === null && gamma === null) {
+      // This means the device can never provide absolute values. We need to fallback
+      // to relative device orientation which is not very accurate and prone to errors.
+      // Consumers of this API better should allow users to switch to non-device-orientation based
+      // means of movement
+      window.removeEventListener('deviceorientationabsolute', onDeviceOrientationChange);
+      window.addEventListener('deviceorientation', onDeviceOrientationChange);
+      return;
+    }
+
+    let q = getQuaternion(alpha, beta, gamma);
+    // align with current lookAt:
+    if (!sceneRotationAdjustment) {
+      // This one point in front of device translated into world's coordinates
+      // (Z points towards us, so take one step in negative direction of Z
+      // https://developers.google.com/web/fundamentals/native-hardware/device-orientation#device_coordinate_frame )
+      let deviceFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], q));
+      let cameraFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], view.rotation));
+      let angle = -Math.acos(vec3.dot(deviceFront, cameraFront))/2;
+      sceneRotationAdjustment = [0, 0, Math.sin(angle), Math.cos(angle)];
+    }
+
+    // account for potential landscape orientation:
+    // TODO: `window.orientation` is deprecated, might need to sue screen.orientation.angle,
+    // but that is not supported by ios
+    let orientation = (window.orientation || 0) as number;
+    let screenAngle = -(Math.PI * orientation / 180 )/2;
+    let s = [0, 0, Math.sin(screenAngle), Math.cos(screenAngle)];
+    quat.mul(q, q, s);
+     // account for difference between lookAt and device orientation:
+    quat.mul(view.rotation, sceneRotationAdjustment, q);
+
+    commitMatrixChanges();
+  }
+
+  function getQuaternion(alpha, beta, gamma ) {
+    var halfToRad = .5 * Math.PI / 180;
+    // These values can be nulls if device cannot provide them for some reason.
+    var _x = beta  ? beta  * halfToRad : 0;
+    var _y = gamma ? gamma * halfToRad : 0;
+    var _z = alpha ? alpha * halfToRad : 0;
+
+    var cX = Math.cos(_x);
+    var cY = Math.cos(_y);
+    var cZ = Math.cos(_z);
+    var sX = Math.sin(_x);
+    var sY = Math.sin(_y);
+    var sZ = Math.sin(_z);
+
+    // ZXY quaternion construction from Euler
+    var x = sX * cY * cZ - cX * sY * sZ;
+    var y = cX * sY * cZ + sX * cY * sZ;
+    var z = cX * cY * sZ + sX * sY * cZ;
+    var w = cX * cY * cZ - sX * sY * sZ;
+
+    return [x, y, z, w];
   }
 
   function onKey(e: KeyboardEvent, isDown: number) {
@@ -249,30 +290,23 @@ export default function createGameCamera(scene: WglScene) {
     dy = clampTo(dy * dampFactor + vy, 0.5, 0);
     dz = clampTo(dz * dampFactor + vz, 0.5, 0);
     dPhi = clampTo((dPhi * dampFactor + vPhi/2), Math.PI/360, 0);
-    if (dPhi){
-      phi -= 3*(rotationSpeed * dPhi) / drawContext.width;
-      phi = clamp(phi, minPhi, maxPhi);
-      needRedraw = true;
-    }
     dIncline = clampTo((dIncline * dampFactor + vIncline/6), Math.PI/360, 0);
-    if (dIncline) {
-      let ar = drawContext.width / drawContext.height;
-      theta -= ((inclinationSpeed * dIncline) / drawContext.height) * ar;
-      theta = clamp(theta, minTheta, maxTheta);
-      needRedraw = true;
-    }
 
     if (dx || dy) {
-      moveCenterBy(-dx * moveSpeed, dy * moveSpeed);
+      moveCenterBy(dx * moveSpeed, dy * moveSpeed);
       needRedraw = true;
     }
     if (dz) {
       cameraPosition[2] += dz * flySpeed;
       needRedraw = true;
     }
+    if (dIncline || dPhi) {
+      rotateBy(-dPhi*1e-2, dIncline*1e-2);
+      needRedraw = true;
+    }
 
     if (needRedraw) {
-      updateMatrix();
+      commitMatrixChanges();
       processNextInput();
     }
     moveState.dx = dx; moveState.dy = dy; moveState.dz = dz;
@@ -281,95 +315,49 @@ export default function createGameCamera(scene: WglScene) {
   }
 
   function lookAt(eye: number[], center: number[]) {
-    let direction = [
-      center[0] - eye[0],
-      center[1] - eye[1],
-      center[2] - eye[2]
-    ];
-    // vec3.copy(centerPosition, center);
-    vec3.copy(cameraPosition, eye);
-    vec3.normalize(direction, direction);
-    
-    let x = direction[0];
-    let y = direction[1];
-    // theta = Math.atan2(y, x);
-    phi = Math.atan2(y,x);
-    theta = Math.atan2(Math.sqrt(x * x + y * y), direction[2]);
-    r = 1;
-    updateMatrix();
+    vec3.set(cameraPosition, eye[0], eye[1], eye[2]);
+    vec3.set(centerPosition, center[0], center[1], center[2]);
+
+    mat4.targetTo(view.cameraWorld, cameraPosition, centerPosition, upVector);
+    mat4.getRotation(view.rotation, view.cameraWorld);
+    mat4.invert(view.matrix, view.cameraWorld);
     return api;
   }
 
   function getUpVector() {
-    let lookAtPosition = getSpherical(r, theta, phi);
-
-    vec3.set(
-      centerPosition,
-      cameraPosition[0] + lookAtPosition[0],
-      cameraPosition[1] + lookAtPosition[1],
-      cameraPosition[2] + lookAtPosition[2],
-    );
-
-    // TODO: is there a faster way?
-    let upVector: number[], x: number[];
-    let offset = Math.PI/4;
-
-    if (theta > offset) {
-      upVector = getSpherical(1, theta - offset, phi);
-      x = getSpherical(1, theta, phi);
-    } else {
-      upVector = getSpherical(1, theta, phi);
-      x = getSpherical(1, theta + offset, phi);
-    }
-    vec3.cross(x, x, upVector);
-    vec3.cross(upVector, x, upVector);
-    vec3.normalize(upVector, upVector);
     return upVector;
   }
 
-  function updateMatrix() {
-    let lookAtPosition = getSpherical(r, theta, phi);
-    vec3.set(
-      centerPosition,
-      cameraPosition[0] + lookAtPosition[0],
-      cameraPosition[1] + lookAtPosition[1],
-      cameraPosition[2] + lookAtPosition[2],
-    );
+  function commitMatrixChanges() {
+    view.update();
+    vec3.transformMat4(centerPosition, [0, 0, -1], view.cameraWorld);
 
-    // TODO: is there a faster way?
-    let upVector: number[], x: number[];
-    let offset = Math.PI/4;
-    if (theta > offset) {
-      upVector = getSpherical(1, theta - offset, phi);
-      x = getSpherical(1, theta, phi);
-    } else {
-      upVector = getSpherical(1, theta, phi);
-      x = getSpherical(1, theta + offset, phi);
-    }
-    vec3.cross(x, x, upVector);
-    vec3.cross(upVector, x, upVector);
-    vec3.normalize(upVector, upVector);
-
-    mat4.targetTo(view.matrix, cameraPosition, centerPosition, upVector);
-    mat4.getRotation(view.rotation, view.matrix);
-    transformEvent.updated = false;
+    transformEvent.updated = false; 
     scene.fire('transform', transformEvent);
-    if(transformEvent.updated) {
-       // try one more time, as something has changed with the camera position.
-      updateMatrix();
+    if (transformEvent.updated) {
+      // the client has changed either position or rotation...
+      // try one more time 
+      commitMatrixChanges();
       return;
     }
 
-    view.update();
     scene.getRoot().scheduleMVPUpdate();
     scene.renderFrame();
   }
 
+  function rotateBy(yaw, pitch) {
+    // Note order here is important: https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up/30669
+    if (yaw) quat.mul(view.rotation, quat.setAxisAngle([], [0, 0, 1], yaw), view.rotation);
+    if (pitch) quat.mul(view.rotation, view.rotation, quat.setAxisAngle([], [1, 0, 0], pitch));
+  }
+
   function moveCenterBy(dx: number, dy: number) {
-    let cPhi = Math.cos(phi);
-    let sPhi = Math.sin(phi);
-    cameraPosition[0] += cPhi * dy + sPhi * dx;
-    cameraPosition[1] += sPhi * dy - cPhi * dx;
+    // TODO: this slow downs when camera looks directly down.
+    // The `dy` is in `z` coordinate, because we are working with view matrix rotations
+    // where z axis is going from the screen towards the viewer
+    let delta = vec3.transformQuat([], [-dx, 0, -dy], view.rotation);
+    cameraPosition[0] += delta[0];
+    cameraPosition[1] += delta[1];
   }
 
   function dispose() {
@@ -383,6 +371,8 @@ export default function createGameCamera(scene: WglScene) {
     document.removeEventListener('pointerlockchange', onPointerLockChange, false);
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
+    window.removeEventListener('deviceorientationabsolute', onDeviceOrientationChange);
+    window.removeEventListener('deviceorientation', onDeviceOrientationChange);
   }
 }
 
