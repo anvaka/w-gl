@@ -7,11 +7,12 @@ import eventify from 'ngraph.events';
 import createDeviceOrientationHandler from './createDeviceOrientationHandler';
 
 const FRONT_VECTOR = [0, 0, -1];
+
 /**
- * Game camera is similar to the first player games, where user can "walk" insider
+ * Game input controls similar to the first player games, where user can "walk" insider
  * the world and look around.
  */
-export default function createGameCamera(scene: WglScene) {
+export default function createFPSControls(scene: WglScene) {
   // Very likely spaceMap camera can be adjusted to support this navigation model too, but
   // for now, I'm using a separate camera. Should consider uniting them in the future if possible.
   const drawContext = scene.getDrawContext();

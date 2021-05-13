@@ -8,17 +8,19 @@ let count = 42;
 let circle = new LineStripCollection(count + 1);
 let points = new PointCollection(count + 1);
 
-let r = 10000;
+let r = 1000;
 for (let i = 0; i <= count * 2; ++i) {
   let angle = 2 * Math.PI * i / count;
   circle.add({
     x: r * Math.cos(angle), 
     y: r * Math.sin(angle), 
+    z: 0,
     color: 0xffffffff
   });
   points.add({
     x: (r + 1) * Math.cos(angle),
     y: (r + 1) * Math.sin(angle),
+    z: 0,
     color: 0xffffffff
   })
 }
@@ -26,8 +28,8 @@ scene.appendChild(circle);
 scene.appendChild(points);
 
 scene.setViewBox({
-  left: -2,
-  top: 2,
-  right: 2,
-  bottom: -2 
+  left: -r,
+  top: r,
+  right: 2 * r,
+  bottom: -2 * r
 })

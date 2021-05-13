@@ -2,7 +2,7 @@
  * Please ignore this. I'm still learning quaternions, and matrices and stuff, this is
  * my debugging playground.
  */
- const {createScene, WireCollection, createGameCamera, createSpaceMapCamera, PointCollection, createGuide} = window.wgl;
+ const {createScene, WireCollection, createGameCamera, PointCollection, createGuide} = window.wgl;
  const {mat4, quat, vec3} = glMatrix;
  window.xel = document.querySelector('.x');
  window.yel = document.querySelector('.y');
@@ -24,7 +24,7 @@
  
  let near = 1;
  let scene = createScene(document.querySelector('canvas'), {
-   createCameraController: createGameCamera,
+   controls: wgl.fpsControls,
    near: near,
    lockMouse: true
  });

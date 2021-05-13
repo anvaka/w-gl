@@ -10,9 +10,9 @@ import {option, clamp, getSpherical} from './cameraUtils';
 import TransformEvent from './TransformEvent';
 
 /**
- * SpaceMap camera is best suited for map-like applications.
+ * Controls that are best suited for map-like applications with top-down view
  */
-export default function createSpaceMapCamera(scene: WglScene) {
+export default function createMapControls(scene: WglScene) {
   const drawContext = scene.getDrawContext();
   let view = drawContext.view;
   let rotationSpeed = Math.PI * 2;

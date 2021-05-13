@@ -5,7 +5,7 @@ import onClap from './clap';
 import {glMatrix, mat4, vec4, vec3, quat} from 'gl-matrix';
 
 import ViewMatrix from './ViewMatrix';
-import createSpaceMapCamera from './createSpaceMapCamera';
+import createMapControls from './createMapControls';
 import {EventCallback, EventKey} from 'ngraph.events';
 import getInputTarget from './input/getInputTarget';
 
@@ -122,7 +122,7 @@ type WGLSceneOptions = {
    */
   camera?: any;
 
-  createCameraController?: any;
+  controls?: any;
 
   lockMouse?: boolean;
 }
@@ -287,7 +287,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
 
   sceneRoot.bindScene(api);
 
-  let cameraController = (options.createCameraController || createSpaceMapCamera)(api);
+  let cameraController = (options.controls || createMapControls)(api);
 
   let disposeClick: Function;
 
