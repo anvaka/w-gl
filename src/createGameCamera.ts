@@ -6,6 +6,7 @@ import TransformEvent from './TransformEvent';
 import eventify from 'ngraph.events';
 import createDeviceOrientationHandler from './createDeviceOrientationHandler';
 
+const FRONT_VECTOR = [0, 0, -1];
 /**
  * Game camera is similar to the first player games, where user can "walk" insider
  * the world and look around.
@@ -156,7 +157,7 @@ export default function createGameCamera(scene: WglScene) {
   }
 
   function updateLookAtByOffset(dx: number, dy: number) {
-    let dYaw = -(rotationSpeed * dx) / drawContext.width;
+    let dYaw = (rotationSpeed * dx) / drawContext.width;
     let dPitch = (inclinationSpeed * dy) / drawContext.height;
     rotateBy(dYaw, dPitch);
     commitMatrixChanges();
@@ -239,7 +240,7 @@ export default function createGameCamera(scene: WglScene) {
       needRedraw = true;
     }
     if (dIncline || dPhi) {
-      rotateBy(-dPhi*1e-2, dIncline*1e-2);
+      rotateBy(dPhi*1e-2, dIncline*1e-2);
       needRedraw = true;
     }
 
@@ -269,7 +270,7 @@ export default function createGameCamera(scene: WglScene) {
 
   function commitMatrixChanges() {
     view.update();
-    vec3.transformMat4(centerPosition, [0, 0, -1], view.cameraWorld);
+    vec3.transformMat4(centerPosition, FRONT_VECTOR, view.cameraWorld);
 
     transformEvent.updated = false; 
     scene.fire('transform', transformEvent);
@@ -288,7 +289,7 @@ export default function createGameCamera(scene: WglScene) {
     // Note order here is important: 
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up/30669
     if (yaw) {
-      quat.mul(view.orientation, quat.setAxisAngle([], [0, 0, 1], yaw), view.orientation);
+      quat.mul(view.orientation, quat.setAxisAngle([], FRONT_VECTOR, yaw), view.orientation);
       // Wanna make sure that device orientation based API is updated after this too
       deviceOrientationHandler.useCurrentOrientation();
     }

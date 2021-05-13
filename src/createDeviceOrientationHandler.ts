@@ -1,7 +1,10 @@
 import {vec3, quat} from 'gl-matrix';
 
+const halfToRad = .5 * Math.PI / 180;
+const FRONT = [0, 0, -1];
+
 /**
- * This class tracks device orientation and applies it to a give object's quaternion (e.g. camera).
+ * This object tracks device orientation and applies it to a give object's quaternion (e.g. camera).
  *  See also: https://developers.google.com/web/fundamentals/native-hardware/device-orientation#device_coordinate_frame
  */
 export default function createDeviceOrientationHandler(inputTarget, objectOrientation, updated) {
@@ -11,8 +14,14 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
   inputTarget.addEventListener('touchend', resetScreenAdjustment);
   let deviceOrientationEventName = 'deviceorientationabsolute';
   window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+  window.addEventListener('orientationchange', updateScreenOrientation);
 
-  let sceneRotationAdjustment: [number, number, number, number] | null;
+
+  let sceneAdjustmentNeedsUpdate = true;
+  const sceneAdjustment = [0, 0, 0, 1];
+  const deviceOrientation = [0, 0, 0, 1];
+  const screenOrientation = [0, 0, 0, 1];
+  updateScreenOrientation();
 
   let api = {
     useCurrentOrientation,
@@ -23,7 +32,7 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
   return api;
 
   function useCurrentOrientation() {
-    sceneRotationAdjustment = null;
+    sceneAdjustmentNeedsUpdate = true;
   }
 
   function onDeviceOrientationChange(e: DeviceOrientationEvent) {
@@ -40,38 +49,52 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
       return;
     }
 
-    let q = getDeviceOrientation(alpha, beta, gamma);
-    // align with current lookAt:
-    if (!sceneRotationAdjustment) {
-      // Here we find an angle between device orientation and the object's orientation i XY plane
-      let deviceFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], q));
-      let cameraFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], objectOrientation));
+    updateDeviceOrientationFromEuler(alpha, beta, gamma);
+
+    // align with current object's orientation:
+    if (sceneAdjustmentNeedsUpdate) {
+      sceneAdjustmentNeedsUpdate = false;
+      // Here we find an angle between device orientation and the object's orientation in XY plane
+      let deviceFront = vec3.transformQuat([], FRONT, deviceOrientation);
+      let cameraFront = vec3.transformQuat([], FRONT, objectOrientation);
 
       // Since we care only about 2D projection:
       let xyDot = deviceFront[0] * cameraFront[0] + deviceFront[1] * cameraFront[1];
       let deviceLength = Math.sqrt(deviceFront[0] * deviceFront[0] + deviceFront[1] * deviceFront[1]);
       let cameraLength = Math.sqrt(cameraFront[0] * cameraFront[0] + cameraFront[1] * cameraFront[1]);
       let angle = Math.acos(xyDot/(deviceLength*cameraLength))/2;
-      // all we care about is the sign of the Z component of a cross product, as it would give us
+      // We care about the sign of the Z component of a cross product, as it gives us
       // direction of correct rotation to align the scene and device.
-      let sign = -Math.sign(vec3.cross([], cameraFront, deviceFront)[2]);
-      sceneRotationAdjustment = [0, 0, sign * Math.sin(angle), Math.cos(angle)];
+
+      // let sign = Math.sign(vec3.cross([], deviceFront, cameraFront)[2]);
+      let sign = Math.sign(deviceFront[0] * cameraFront[1] - deviceFront[1] * cameraFront[0])
+
+      // These two are zero:
+      // sceneAdjustment[0] = 0;
+      // sceneAdjustment[1] = 0;
+      sceneAdjustment[2] = sign * Math.sin(angle);
+      sceneAdjustment[3] = Math.cos(angle);
     }
 
-    // TODO: `window.orientation` is deprecated, might need to sue screen.orientation.angle,
-    // but that is not supported by ios
-    let orientation = (window.orientation || 0) as number;
-    let screenAngle = -(Math.PI * orientation / 180 )/2;
-    let s = [0, 0, Math.sin(screenAngle), Math.cos(screenAngle)];
-    quat.mul(q, q, s);
-     // account for difference between lookAt and device orientation:
-    quat.mul(objectOrientation, sceneRotationAdjustment, q);
-    // quat.mul(objectOrientation, [0, 0, 0, 1], q);
+    quat.mul(deviceOrientation, deviceOrientation, screenOrientation);
+    // account for difference between lookAt and device orientation:
+    quat.mul(objectOrientation, sceneAdjustment, deviceOrientation);
     updated();
   }
 
-  function getDeviceOrientation(alpha, beta, gamma ) {
-    var halfToRad = .5 * Math.PI / 180;
+  function updateScreenOrientation() {
+    // TODO: `window.orientation` is deprecated, might need to sue screen.orientation.angle,
+    // but that is not supported by ios
+    let orientation = (window.orientation || 0) as number;
+    let screenAngle = -orientation * halfToRad;
+    // We assume these two are zero:
+    // screenOrientation[0] = 0;
+    // screenOrientation[1] = 0;
+    screenOrientation[2] = Math.sin(screenAngle);
+    screenOrientation[3] = Math.cos(screenAngle);
+  }
+
+  function updateDeviceOrientationFromEuler(alpha, beta, gamma) {
     // These values can be nulls if device cannot provide them for some reason.
     var _x = beta  ? beta  * halfToRad : 0;
     var _y = gamma ? gamma * halfToRad : 0;
@@ -85,35 +108,33 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
     var sZ = Math.sin(_z);
 
     // ZXY quaternion construction from Euler
-    var x = sX * cY * cZ - cX * sY * sZ;
-    var y = cX * sY * cZ + sX * cY * sZ;
-    var z = cX * cY * sZ + sX * sY * cZ;
-    var w = cX * cY * cZ - sX * sY * sZ;
-
-    return [x, y, z, w];
+    deviceOrientation[0] = sX * cY * cZ - cX * sY * sZ;
+    deviceOrientation[1] = cX * sY * cZ + sX * cY * sZ;
+    deviceOrientation[2] = cX * cY * sZ + sX * sY * cZ;
+    deviceOrientation[3] = cX * cY * cZ - sX * sY * sZ;
   }
-
 
   function dispose() {
     inputTarget.removeEventListener('touchstart', pauseDeviceOrientation);
     inputTarget.removeEventListener('touchend', resetScreenAdjustment);
     window.removeEventListener('deviceorientationabsolute', onDeviceOrientationChange);
     window.removeEventListener('deviceorientation', onDeviceOrientationChange);
+    window.removeEventListener('orientationchange', updateScreenOrientation);
   }
 
   function pauseDeviceOrientation(e) {
-    if (sceneRotationAdjustment === null) return;
-    sceneRotationAdjustment = null;
+    if (sceneAdjustmentNeedsUpdate) return;
+    sceneAdjustmentNeedsUpdate = true;
+
     e.preventDefault();
     window.removeEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
   }
 
   function resetScreenAdjustment(e) {
     if (e.touches.length) return; // still touching. Wait till all are gone
-    sceneRotationAdjustment = null;
+    sceneAdjustmentNeedsUpdate = true;
     // just in case... to prevent leaking.
     window.removeEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
     window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
   }
-
 }
