@@ -1,9 +1,10 @@
-import {vec3,  quat, mat4} from 'gl-matrix';
+import {vec3, quat, mat4} from 'gl-matrix';
 import {WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
-import {option, clamp, clampTo, getSpherical} from './cameraUtils';
+import {option, clampTo} from './cameraUtils';
 import TransformEvent from './TransformEvent';
 import eventify from 'ngraph.events';
+import createDeviceOrientationHandler from './createDeviceOrientationHandler';
 
 /**
  * Game camera is similar to the first player games, where user can "walk" insider
@@ -41,9 +42,7 @@ export default function createGameCamera(scene: WglScene) {
   inputTarget.addEventListener('mousedown', handleMouseDown);
 
   document.addEventListener('pointerlockchange', onPointerLockChange, false);
-
-  // TODO: Extract device orientation handling into own class.
-  window.addEventListener('deviceorientationabsolute', onDeviceOrientationChange, true);
+  let deviceOrientationHandler = createDeviceOrientationHandler(inputTarget, view.orientation, commitMatrixChanges);
   
   let transformEvent = new TransformEvent(scene); 
   let frameHandle = 0;
@@ -55,7 +54,6 @@ export default function createGameCamera(scene: WglScene) {
   let moveSpeed = 0.01; // TODO: Might wanna make this computed based on distance to surface
   let flySpeed = 1e-2;
 
-  let sceneRotationAdjustment: [number, number, number, number];
   const api = {
     MOVE_FORWARD:  1,
     MOVE_BACKWARD: 2,
@@ -164,66 +162,6 @@ export default function createGameCamera(scene: WglScene) {
     commitMatrixChanges();
   }
 
-  function onDeviceOrientationChange(e: DeviceOrientationEvent) {
-    const {alpha, beta, gamma} = e;
-    if (e.absolute && alpha === null && beta === null && gamma === null) {
-      // This means the device can never provide absolute values. We need to fallback
-      // to relative device orientation which is not very accurate and prone to errors.
-      // Consumers of this API better should allow users to switch to non-device-orientation based
-      // means of movement
-      window.removeEventListener('deviceorientationabsolute', onDeviceOrientationChange);
-      window.addEventListener('deviceorientation', onDeviceOrientationChange);
-      return;
-    }
-
-    let q = getQuaternion(alpha, beta, gamma);
-    // align with current lookAt:
-    if (!sceneRotationAdjustment) {
-      // This one point in front of device translated into world's coordinates
-      // (Z points towards us, so take one step in negative direction of Z
-      // https://developers.google.com/web/fundamentals/native-hardware/device-orientation#device_coordinate_frame )
-      let deviceFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], q));
-      let cameraFront = vec3.normalize([], vec3.transformQuat([], [0, 0, -1], view.orientation));
-      let angle = -Math.acos(vec3.dot(deviceFront, cameraFront))/2;
-      sceneRotationAdjustment = [0, 0, Math.sin(angle), Math.cos(angle)];
-    }
-
-    // account for potential landscape orientation:
-    // TODO: `window.orientation` is deprecated, might need to sue screen.orientation.angle,
-    // but that is not supported by ios
-    let orientation = (window.orientation || 0) as number;
-    let screenAngle = -(Math.PI * orientation / 180 )/2;
-    let s = [0, 0, Math.sin(screenAngle), Math.cos(screenAngle)];
-    quat.mul(q, q, s);
-     // account for difference between lookAt and device orientation:
-    quat.mul(view.orientation, sceneRotationAdjustment, q);
-
-    commitMatrixChanges();
-  }
-
-  function getQuaternion(alpha, beta, gamma ) {
-    var halfToRad = .5 * Math.PI / 180;
-    // These values can be nulls if device cannot provide them for some reason.
-    var _x = beta  ? beta  * halfToRad : 0;
-    var _y = gamma ? gamma * halfToRad : 0;
-    var _z = alpha ? alpha * halfToRad : 0;
-
-    var cX = Math.cos(_x);
-    var cY = Math.cos(_y);
-    var cZ = Math.cos(_z);
-    var sX = Math.sin(_x);
-    var sY = Math.sin(_y);
-    var sZ = Math.sin(_z);
-
-    // ZXY quaternion construction from Euler
-    var x = sX * cY * cZ - cX * sY * sZ;
-    var y = cX * sY * cZ + sX * cY * sZ;
-    var z = cX * cY * sZ + sX * sY * cZ;
-    var w = cX * cY * cZ - sX * sY * sZ;
-
-    return [x, y, z, w];
-  }
-
   function onKey(e: KeyboardEvent, isDown: number) {
     if (isModifierKey(e)) {
       // remove the move down if modifier was pressed after shift
@@ -321,6 +259,7 @@ export default function createGameCamera(scene: WglScene) {
     mat4.targetTo(view.cameraWorld, cameraPosition, centerPosition, upVector);
     mat4.getRotation(view.orientation, view.cameraWorld);
     mat4.invert(view.matrix, view.cameraWorld);
+    commitMatrixChanges();
     return api;
   }
 
@@ -346,8 +285,13 @@ export default function createGameCamera(scene: WglScene) {
   }
 
   function rotateBy(yaw, pitch) {
-    // Note order here is important: https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up/30669
-    if (yaw) quat.mul(view.orientation, quat.setAxisAngle([], [0, 0, 1], yaw), view.orientation);
+    // Note order here is important: 
+    // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up/30669
+    if (yaw) {
+      quat.mul(view.orientation, quat.setAxisAngle([], [0, 0, 1], yaw), view.orientation);
+      // Wanna make sure that device orientation based API is updated after this too
+      deviceOrientationHandler.useCurrentOrientation();
+    }
     if (pitch) quat.mul(view.orientation, view.orientation, quat.setAxisAngle([], [1, 0, 0], pitch));
   }
 
@@ -371,8 +315,7 @@ export default function createGameCamera(scene: WglScene) {
     document.removeEventListener('pointerlockchange', onPointerLockChange, false);
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
-    window.removeEventListener('deviceorientationabsolute', onDeviceOrientationChange);
-    window.removeEventListener('deviceorientation', onDeviceOrientationChange);
+    deviceOrientationHandler.dispose();
   }
 }
 

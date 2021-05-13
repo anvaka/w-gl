@@ -1,5 +1,6 @@
 /**
- * Please ignore this. I'm still learning quaternions, and matrices and stuff.
+ * Please ignore this. I'm still learning quaternions, and matrices and stuff, this is
+ * my debugging playground.
  */
  const {createScene, WireCollection, createGameCamera, createSpaceMapCamera, PointCollection, createGuide} = window.wgl;
  const {mat4, quat, vec3} = glMatrix;
@@ -25,7 +26,7 @@
  let scene = createScene(document.querySelector('canvas'), {
    createCameraController: createGameCamera,
    near: near,
-   lockMouse: false
+   lockMouse: true
  });
  // let alpha = scene.getDrawContext().fov;
  function createPoint() {
@@ -103,64 +104,63 @@
  requestAnimationFrame(frame);
  function frame() {
     pointHandle.phi += 0.01;
-   pointHandle.theta += dir * .01;
-   if (pointHandle.theta> Math.PI) {
-     dir *= -1; 
-     pointHandle.theta = Math.PI;
-   }
-   if (pointHandle.theta < 0) {
-     pointHandle.theta = 0 ;
-     dir *= -1;
-   }
-   if (pointHandle.theta > 2* Math.PI) pointHandle.theta = 0;
-   pointHandle.updatePoint();
-   pointUI.update({ 
-     x: curPoint[0],
-     y: curPoint[1],
-     z: curPoint[2],
-     color: 0xffffffff,
-     size: 0.2
-   });
-   let {phi, theta} = pointHandle;
+    pointHandle.theta += dir * .01;
+    if (pointHandle.theta> Math.PI) {
+      dir *= -1; 
+      pointHandle.theta = Math.PI;
+    }
+    if (pointHandle.theta < 0) {
+      pointHandle.theta = 0 ;
+      dir *= -1;
+    }
+    if (pointHandle.theta > 2* Math.PI) pointHandle.theta = 0;
+    pointHandle.updatePoint();
+    pointUI.update({ 
+      x: curPoint[0],
+      y: curPoint[1],
+      z: curPoint[2],
+      color: 0xffffffff,
+      size: 0.2
+    });
+    let {phi, theta} = pointHandle;
+  
+    let inclination = quat.setAxisAngle([], vec3.normalize([], [-curPoint[1], curPoint[0], 0]), theta - Math.PI/2)
+    let p = [0, -1, 0];
+    let originalRotation = [0, 0, Math.sin(phi/2 + Math.PI/4), Math.cos(phi/2 + Math.PI/4)];
+    quat.mul(originalRotation, inclination, originalRotation);
+    vec3.transformQuat(p, p, originalRotation);
  
-   let inclination = quat.setAxisAngle([], vec3.normalize([], [-curPoint[1], curPoint[0], 0]), theta - Math.PI/2)
-   let p = [0, -1, 0];
-   let originalRotation = [0, 0, Math.sin(phi/2 + Math.PI/4), Math.cos(phi/2 + Math.PI/4)];
-   quat.mul(originalRotation, inclination, originalRotation);
-   vec3.transformQuat(p, p, originalRotation);
- 
- quatUI.update({
-   x: p[0],
-   y: p[1],
-   z: p[2],
-   color: 0x00ff00ff,
-   size: 0.2
- })
- 
+    quatUI.update({
+      x: p[0],
+      y: p[1],
+      z: p[2],
+      color: 0x00ff00ff,
+      size: 0.2
+    })
  
    requestAnimationFrame(frame);
    scene.renderFrame();
  }
- scene.on('transform', e => {
-   let view = e.drawContext.view;
-   let eye = view.position;
+//  scene.on('transform', e => {
+//    let view = e.drawContext.view;
+//    let eye = view.position;
   //  let dir = vec3.sub([], view.center, eye);
   //  vec3.normalize(dir, dir);
   //  let angle = Math.acos(vec3.dot(vec3.normalize([], [0, 0, -eye[2]]), dir));
   //  let d = eye[2] / Math.sin(angle);
-    // let p = vec3.transformQuat([], [1, 0, -4], view.rotation);
-    let p = vec3.transformMat4([], [0, 0, -1], view.cameraWorld);
-   cursorUI.update({ 
-    //  x: eye[0] + p[0],
-    //  y: eye[1] + p[1],
-    //  z: eye[2] + p[2],
-     x: p[0],
-     y: p[1],
-     z: p[2],
-     color: 0xffffffff,
-     size: 0.2
-   });
- })
+  //  let p = vec3.transformQuat([], [0, 0, -1], view.orientation);
+  //  //let p = vec3.transformMat4([], [0, 0, -1], view.cameraWorld);
+  //  cursorUI.update({ 
+  //    x: eye[0] + p[0],
+  //    y: eye[1] + p[1],
+  //    z: eye[2] + p[2],
+  //   //  x: p[0],
+  //   //  y: p[1],
+  //   //  z: p[2],
+  //    color: 0xffffffff,
+  //    size: 0.2
+  //  });
+//  })
  document.addEventListener('mousemove', function (e) {
    let pos = scene.getSceneCoordinate(e.clientX, e.clientY);
    mouseUI.update({ 
