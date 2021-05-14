@@ -26,8 +26,9 @@
  let scene = createScene(document.querySelector('canvas'), {
    controls: wgl.fpsControls,
    near: near,
-   lockMouse: true
+   captureMouse: true
  });
+ wgl.createFPSControlsUI(document.body, scene.getCameraController());
  // let alpha = scene.getDrawContext().fov;
  function createPoint() {
    let point = [];

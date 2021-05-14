@@ -13,7 +13,20 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
   inputTarget.addEventListener('touchstart', pauseDeviceOrientation);
   inputTarget.addEventListener('touchend', resetScreenAdjustment);
   let deviceOrientationEventName = 'deviceorientationabsolute';
-  window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+  
+  if (typeof window.DeviceOrientationEvent !== undefined && 
+    window.DeviceOrientationEvent.requestPermission !== undefined) {
+    // We are in IOS? IOS doesn't have the deviceorientationabsolute for some reason.
+    deviceOrientationEventName = 'deviceorientation';
+    DeviceOrientationEvent.requestPermission().then(response => {
+      if (response === 'granted') {
+        window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+      }
+    })
+  } else {
+    window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+  }
+
   window.addEventListener('orientationchange', updateScreenOrientation);
 
 

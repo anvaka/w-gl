@@ -124,7 +124,7 @@ type WGLSceneOptions = {
 
   controls?: any;
 
-  lockMouse?: boolean;
+  captureMouse?: boolean;
 }
 
 /**

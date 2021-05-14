@@ -8,6 +8,19 @@ import createDeviceOrientationHandler from './createDeviceOrientationHandler';
 
 const FRONT_VECTOR = [0, 0, -1];
 
+export const INPUT_COMMANDS = {
+  MOVE_FORWARD:  1,
+  MOVE_BACKWARD: 2,
+  MOVE_LEFT:  3,
+  MOVE_RIGHT: 4,
+  MOVE_UP:    5,
+  MOVE_DOWN:  6,
+  TURN_LEFT:  7,
+  TURN_RIGHT: 8,
+  TURN_UP:    9,
+  TURN_DOWN:  10,
+}
+
 /**
  * Game input controls similar to the first player games, where user can "walk" insider
  * the world and look around.
@@ -31,7 +44,7 @@ export default function createFPSControls(scene: WglScene) {
   let rotationSpeed = Math.PI;
   let inclinationSpeed = Math.PI * 1.618;
 
-  let lockMouse = option(sceneOptions.lockMouse, false); // whether rotation is done via locked mouse
+  let captureMouse = option(sceneOptions.captureMouse, false); // whether rotation is done via locked mouse
   let mouseX: number, mouseY: number;
 
   const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
@@ -52,28 +65,28 @@ export default function createFPSControls(scene: WglScene) {
   let dx = 0, dy = 0, dz = 0; // actual offset of the panning
   let dPhi = 0, vPhi = 0; // rotation 
   let dIncline = 0, vIncline = 0; // inclination
-  let moveState = {dx, dy, dz, dPhi, dIncline};
+  let moveState = {
+    [INPUT_COMMANDS.MOVE_FORWARD]:  false,
+    [INPUT_COMMANDS.MOVE_BACKWARD]: false,
+    [INPUT_COMMANDS.MOVE_LEFT]:     false,
+    [INPUT_COMMANDS.MOVE_RIGHT]:    false,
+    [INPUT_COMMANDS.MOVE_UP]:       false,
+    [INPUT_COMMANDS.MOVE_DOWN]:     false,
+    [INPUT_COMMANDS.TURN_LEFT]:     false,
+    [INPUT_COMMANDS.TURN_RIGHT]:    false,
+    [INPUT_COMMANDS.TURN_UP]:       false,
+    [INPUT_COMMANDS.TURN_DOWN]:     false,
+  };
   let moveSpeed = 0.01; // TODO: Might wanna make this computed based on distance to surface
   let flySpeed = 1e-2;
 
   const api = {
-    MOVE_FORWARD:  1,
-    MOVE_BACKWARD: 2,
-    MOVE_LEFT:  3,
-    MOVE_RIGHT: 4,
-    MOVE_UP:    5,
-    MOVE_DOWN:  6,
-    TURN_LEFT:  7,
-    TURN_RIGHT: 8,
-    TURN_UP:    9,
-    TURN_DOWN:  10,
-
     dispose,
     handleCommand,
     setViewBox,
     getUpVector,
     lookAt,
-    setMouseCapture(isLocked: boolean) { lockMouse = isLocked; return api; },
+    setMouseCapture,
     setRotationSpeed(speed: number) { rotationSpeed = speed; return api; },
     setMoveSpeed(speed: number) { moveSpeed = speed; return api; },
     setFlySpeed(speed: number) { flySpeed = speed; return api; },
@@ -82,22 +95,22 @@ export default function createFPSControls(scene: WglScene) {
     getMoveSpeed() { return moveSpeed; },
     getFlySpeed() { return flySpeed; },
     getKeymap() { return keyMap; },
-    getMouseCapture() { return lockMouse; }
+    getMouseCapture() { return captureMouse; }
   };
 
   const keyMap = {
-    /* W */ 87: api.MOVE_FORWARD,
-    /* A */ 65: api.MOVE_LEFT,
-    /* S */ 83: api.MOVE_BACKWARD,
-    /* D */ 68: api.MOVE_RIGHT,
-    /* Q */ 81: api.TURN_LEFT,
-    /* ← */ 37: api.TURN_LEFT,
-    /* E */ 69: api.TURN_RIGHT,
-    /* → */ 39: api.TURN_RIGHT,
-    /* ↑ */ 38: api.TURN_UP,
-    /* ↓ */ 40: api.TURN_DOWN,
-/* Shift */ 16: api.MOVE_DOWN,
-/* Space */ 32: api.MOVE_UP
+    /* W */ 87: INPUT_COMMANDS.MOVE_FORWARD,
+    /* A */ 65: INPUT_COMMANDS.MOVE_LEFT,
+    /* S */ 83: INPUT_COMMANDS.MOVE_BACKWARD,
+    /* D */ 68: INPUT_COMMANDS.MOVE_RIGHT,
+    /* Q */ 81: INPUT_COMMANDS.TURN_LEFT,
+    /* ← */ 37: INPUT_COMMANDS.TURN_LEFT,
+    /* E */ 69: INPUT_COMMANDS.TURN_RIGHT,
+    /* → */ 39: INPUT_COMMANDS.TURN_RIGHT,
+    /* ↑ */ 38: INPUT_COMMANDS.TURN_UP,
+    /* ↓ */ 40: INPUT_COMMANDS.TURN_DOWN,
+/* Shift */ 16: INPUT_COMMANDS.MOVE_DOWN,
+/* Space */ 32: INPUT_COMMANDS.MOVE_UP
   };
 
   eventify(api);
@@ -116,7 +129,7 @@ export default function createFPSControls(scene: WglScene) {
 
     if (document.pointerLockElement) {
       document.exitPointerLock();
-    } else if (lockMouse) {
+    } else if (captureMouse) {
       inputTarget.requestPointerLock();
     } else {
       inputTarget.focus();
@@ -164,6 +177,12 @@ export default function createFPSControls(scene: WglScene) {
     commitMatrixChanges();
   }
 
+  function setMouseCapture(isLocked: boolean) { 
+    captureMouse = isLocked; 
+    (api as any).fire('mouse-capture', isLocked);
+    return api; 
+  }
+
   function onKey(e: KeyboardEvent, isDown: number) {
     if (isModifierKey(e)) {
       // remove the move down if modifier was pressed after shift
@@ -176,26 +195,26 @@ export default function createFPSControls(scene: WglScene) {
 
   function handleCommand(commandId, value: number) {
     switch (commandId) {
-      case api.MOVE_FORWARD:
+      case INPUT_COMMANDS.MOVE_FORWARD:
         vy = value; break;
-      case api.MOVE_BACKWARD:
+      case INPUT_COMMANDS.MOVE_BACKWARD:
         vy = -value; break;
-      case api.MOVE_LEFT:
+      case INPUT_COMMANDS.MOVE_LEFT:
         vx = value; break;
-      case api.MOVE_RIGHT:
+      case INPUT_COMMANDS.MOVE_RIGHT:
         vx = -value; break;
-      case api.MOVE_UP:
+      case INPUT_COMMANDS.MOVE_UP:
         vz = value; break;
-      case api.MOVE_DOWN:
+      case INPUT_COMMANDS.MOVE_DOWN:
         vz = -value; break;
 
-      case api.TURN_LEFT:
+      case INPUT_COMMANDS.TURN_LEFT:
         vPhi = -value; break;
-      case api.TURN_RIGHT:
+      case INPUT_COMMANDS.TURN_RIGHT:
         vPhi = value; break;
-      case api.TURN_UP:
+      case INPUT_COMMANDS.TURN_UP:
         vIncline = value; break;
-      case api.TURN_DOWN:
+      case INPUT_COMMANDS.TURN_DOWN:
         vIncline = -value; break;
 
       default: {
@@ -241,7 +260,7 @@ export default function createFPSControls(scene: WglScene) {
       needRedraw = true;
     }
     if (dIncline || dPhi) {
-      rotateBy(dPhi*1e-2, dIncline*1e-2);
+      rotateBy(dPhi*0.01, dIncline*0.01);
       needRedraw = true;
     }
 
@@ -249,8 +268,14 @@ export default function createFPSControls(scene: WglScene) {
       commitMatrixChanges();
       processNextInput();
     }
-    moveState.dx = dx; moveState.dy = dy; moveState.dz = dz;
-    moveState.dPhi = dPhi; moveState.dIncline = dIncline;
+    moveState[INPUT_COMMANDS.MOVE_LEFT] = dx > 0;
+    moveState[INPUT_COMMANDS.MOVE_RIGHT] = dx < 0;
+    moveState[INPUT_COMMANDS.MOVE_FORWARD] = dy > 0;
+    moveState[INPUT_COMMANDS.MOVE_BACKWARD] = dy < 0;
+    moveState[INPUT_COMMANDS.MOVE_UP] = dz > 0;
+    moveState[INPUT_COMMANDS.MOVE_DOWN] = dz < 0;
+    moveState[INPUT_COMMANDS.TURN_LEFT] = dPhi < 0;
+    moveState[INPUT_COMMANDS.TURN_RIGHT] = dPhi > 0;
     (api as any).fire('move', moveState);
   }
 

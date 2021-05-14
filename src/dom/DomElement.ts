@@ -34,7 +34,7 @@ export default class DomElement extends Element {
   updateWorldTransform(force?: boolean) {
     let updated = super.updateWorldTransform(force);
     if (updated) {
-      (this as any).fire('updateTransform', this);
+      (this as any).fire('update-transform', this);
     }
     return updated;
   }

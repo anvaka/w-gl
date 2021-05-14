@@ -10,6 +10,7 @@ export {default as utils} from './src/glUtils';
 export {default as toSVG} from './src/save/svg';
 export {default as mapControls} from './src/createMapControls';
 export {default as fpsControls} from './src/createFPSControls';
+export {default as createFPSControlsUI} from './src/createFPSControlsUI';
 export {default as createGuide} from './src/input/createGuide';
 
 // gl stuff:

@@ -76,7 +76,7 @@ export class SeeThroughCollection extends GLCollection {
     });
 
     this.domElementToPoints.set(dom, quadPointTrackers);
-    (dom as any).on('updateTransform', this.updateDOMElementTransform, this);
+    (dom as any).on('update-transform', this.updateDOMElementTransform, this);
     (dom as any).on('disposed', this.disposeDomElement, this);
   }
 
@@ -100,7 +100,7 @@ export class SeeThroughCollection extends GLCollection {
     });
 
     // Clean up
-    (domElement as any).off('updateTransform', this.updateDOMElementTransform);
+    (domElement as any).off('update-transform', this.updateDOMElementTransform);
     (domElement as any).off('disposed', this.disposeDomElement);
     this.domElementToPoints.delete(domElement);
   }
