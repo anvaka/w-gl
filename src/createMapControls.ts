@@ -257,14 +257,15 @@ export default function createMapControls(scene: WglScene) {
     vec3.add(cameraPosition, cameraPosition, centerPointPosition);
 
     // I'd assume this could be simplified? I just don't know and haven't thought yet how:
-    mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
-    mat4.getRotation(view.orientation, view.matrix);
+    mat4.targetTo(view.cameraWorld, cameraPosition, centerPointPosition, upVector);
+    mat4.getRotation(view.orientation, view.cameraWorld);
     view.update();
+
     transformEvent.updated = false;
     scene.fire('transform', transformEvent);
     if(transformEvent.updated) {
-      mat4.targetTo(view.matrix, cameraPosition, centerPointPosition, upVector);
-      mat4.getRotation(view.orientation, view.matrix);
+      redraw();
+      return;
     }
 
     scene.getRoot().scheduleMVPUpdate();
