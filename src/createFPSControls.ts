@@ -57,7 +57,6 @@ export default function createFPSControls(scene: WglScene) {
   inputTarget.addEventListener('mousedown', handleMouseDown);
 
   document.addEventListener('pointerlockchange', onPointerLockChange, false);
-  let deviceOrientationHandler = createDeviceOrientationHandler(inputTarget, view.orientation, commitMatrixChanges);
   
   let transformEvent = new TransformEvent(scene); 
   let frameHandle = 0;
@@ -86,7 +85,9 @@ export default function createFPSControls(scene: WglScene) {
     setViewBox,
     getUpVector,
     lookAt,
-    setMouseCapture,
+    enableMouseCapture,
+    enableDeviceOrientation,
+    isDeviceOrientationEnabled,
     setRotationSpeed(speed: number) { rotationSpeed = speed; return api; },
     setMoveSpeed(speed: number) { moveSpeed = speed; return api; },
     setFlySpeed(speed: number) { flySpeed = speed; return api; },
@@ -114,6 +115,8 @@ export default function createFPSControls(scene: WglScene) {
   };
 
   eventify(api);
+
+  const deviceOrientationHandler = createDeviceOrientationHandler(inputTarget, view.orientation, commitMatrixChanges, api);
   return api;
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -177,10 +180,18 @@ export default function createFPSControls(scene: WglScene) {
     commitMatrixChanges();
   }
 
-  function setMouseCapture(isLocked: boolean) { 
+  function enableMouseCapture(isLocked: boolean) { 
     captureMouse = isLocked; 
     (api as any).fire('mouse-capture', isLocked);
     return api; 
+  }
+
+  function enableDeviceOrientation(isEnabled: boolean) {
+    deviceOrientationHandler.enable(isEnabled);
+  }
+
+  function isDeviceOrientationEnabled() {
+    return deviceOrientationHandler.isEnabled;
   }
 
   function onKey(e: KeyboardEvent, isDown: number) {

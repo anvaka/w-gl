@@ -14,14 +14,23 @@ export default function createFPSControlsUI(parent: Element, inputControls: any)
   parent.appendChild(container);
   let buttons = Array.from(container.querySelectorAll('a.navigation-btn'));
   let disposeList = buttons.map(createHandler);
+  inputControls.on('move', updateTransforms);
+
+  // Mouse capture handlers
   let captureMouse = container.querySelector('#capture-mouse') as HTMLInputElement;
   if (inputControls.getMouseCapture()) {
     captureMouse.checked = true;
   }
   captureMouse.addEventListener('change', onCaptureMouseChangedFromUI);
-
-  inputControls.on('move', updateTransforms);
   inputControls.on('mouse-capture', onCaptureMouseChangedFromControls);
+
+  // device orientation handlers
+  let deviceOrientation = container.querySelector('#device-orientation') as HTMLInputElement;
+  if (deviceOrientation) {
+    deviceOrientation.checked = inputControls.isDeviceOrientationEnabled();
+    deviceOrientation.addEventListener('change', onDeviceOrientationChangedFromUI);
+  }
+  inputControls.on('device-orientation', onDeviceOrientationChangedFromControls);
 
   return {dispose}
 
@@ -33,11 +42,19 @@ export default function createFPSControlsUI(parent: Element, inputControls: any)
   }
 
   function onCaptureMouseChangedFromUI(e) {
-    inputControls.setMouseCapture(captureMouse.checked);
+    inputControls.enableMouseCapture(captureMouse.checked);
   }
 
   function onCaptureMouseChangedFromControls(isCaptured) {
     captureMouse.checked = isCaptured;
+  }
+
+  function onDeviceOrientationChangedFromUI() {
+    inputControls.enableDeviceOrientation(deviceOrientation.checked);
+  }
+
+  function onDeviceOrientationChangedFromControls(isEnabled) {
+    if (deviceOrientation) deviceOrientation.checked = isEnabled;
   }
 
   function updateTransforms(e) {
@@ -115,7 +132,18 @@ function getMarkup() {
     <input type='checkbox' id='capture-mouse' name="capture-mouse">
     <label for='capture-mouse'>Capture mouse cursor</label>
   </div>
+  ${deviceOrientationBlock()}
 </div>`;
+}
+
+function deviceOrientationBlock() {
+  if (window.DeviceOrientationEvent && 'ontouchstart' in window) {
+    return `<div class='device-orientation-legend'>
+    <input type='checkbox' id='device-orientation' name="device-orientation">
+    <label for='device-orientation'>Use device orientation</label>
+  </div>`;
+  }
+  return '';
 }
 
 function getStyle(className: string) {

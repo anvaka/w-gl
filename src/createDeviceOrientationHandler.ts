@@ -7,28 +7,14 @@ const FRONT = [0, 0, -1];
  * This object tracks device orientation and applies it to a give object's quaternion (e.g. camera).
  *  See also: https://developers.google.com/web/fundamentals/native-hardware/device-orientation#device_coordinate_frame
  */
-export default function createDeviceOrientationHandler(inputTarget, objectOrientation, updated) {
+export default function createDeviceOrientationHandler(inputTarget, objectOrientation, updated, events) {
   if (!updated) updated = Function.prototype;
 
   inputTarget.addEventListener('touchstart', pauseDeviceOrientation);
   inputTarget.addEventListener('touchend', resetScreenAdjustment);
   let deviceOrientationEventName = 'deviceorientationabsolute';
-  
-  if (typeof window.DeviceOrientationEvent !== undefined && 
-    window.DeviceOrientationEvent.requestPermission !== undefined) {
-    // We are in IOS? IOS doesn't have the deviceorientationabsolute for some reason.
-    deviceOrientationEventName = 'deviceorientation';
-    DeviceOrientationEvent.requestPermission().then(response => {
-      if (response === 'granted') {
-        window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
-      }
-    })
-  } else {
-    window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
-  }
 
   window.addEventListener('orientationchange', updateScreenOrientation);
-
 
   let sceneAdjustmentNeedsUpdate = true;
   const sceneAdjustment = [0, 0, 0, 1];
@@ -37,12 +23,44 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
   updateScreenOrientation();
 
   let api = {
+    isEnabled: false,
+    isAbsolute: true,
     useCurrentOrientation,
     dispose,
-    isAbsolute: true
+    enable,
   };
 
+  enable(true);
+
   return api;
+
+  function enable(newEnabled: boolean) {
+    api.isEnabled = newEnabled;
+
+    if (api.isEnabled) {
+      if (typeof window.DeviceOrientationEvent !== undefined && 
+        window.DeviceOrientationEvent.requestPermission !== undefined) {
+        // We are in IOS? IOS doesn't have the deviceorientationabsolute for some reason.
+        DeviceOrientationEvent.requestPermission().then(response => {
+          if (response === 'granted') {
+            deviceOrientationEventName = 'deviceorientation';
+            window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+          } else {
+            api.isEnabled = false;
+          }
+          if (events) events.fire('device-orientation', api.isEnabled);
+        }).catch(e => {
+          api.isEnabled = false;
+          if (events) events.fire('device-orientation', api.isEnabled);
+        });
+      } else {
+        window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+      }
+    } else {
+      pauseDeviceOrientation();
+      if (events) events.fire('device-orientation', api.isEnabled);
+    }
+  }
 
   function useCurrentOrientation() {
     sceneAdjustmentNeedsUpdate = true;
@@ -135,11 +153,11 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
     window.removeEventListener('orientationchange', updateScreenOrientation);
   }
 
-  function pauseDeviceOrientation(e) {
+  function pauseDeviceOrientation(e?: UIEvent) {
     if (sceneAdjustmentNeedsUpdate) return;
     sceneAdjustmentNeedsUpdate = true;
 
-    e.preventDefault();
+    if (e) e.preventDefault();
     window.removeEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
   }
 
@@ -147,7 +165,9 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
     if (e.touches.length) return; // still touching. Wait till all are gone
     sceneAdjustmentNeedsUpdate = true;
     // just in case... to prevent leaking.
-    window.removeEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
-    window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+    if (api.isEnabled) {
+      window.removeEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+      window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
+    }
   }
 }
