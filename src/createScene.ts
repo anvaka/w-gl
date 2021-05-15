@@ -125,6 +125,7 @@ type WGLSceneOptions = {
   controls?: any;
 
   captureMouse?: boolean;
+  useDeviceOrientation?: boolean;
 }
 
 /**

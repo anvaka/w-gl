@@ -30,8 +30,6 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
     enable,
   };
 
-  enable(true);
-
   return api;
 
   function enable(newEnabled: boolean) {

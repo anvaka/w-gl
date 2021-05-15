@@ -55,6 +55,8 @@ export default function createFPSControls(scene: WglScene) {
   inputTarget.addEventListener('keydown', handleKeyDown);
   inputTarget.addEventListener('keyup', handleKeyUp);
   inputTarget.addEventListener('mousedown', handleMouseDown);
+  inputTarget.addEventListener('touchmove', handleTouchMove);
+  inputTarget.addEventListener('touchstart', handleTouchStart);
 
   document.addEventListener('pointerlockchange', onPointerLockChange, false);
   
@@ -117,6 +119,9 @@ export default function createFPSControls(scene: WglScene) {
   eventify(api);
 
   const deviceOrientationHandler = createDeviceOrientationHandler(inputTarget, view.orientation, commitMatrixChanges, api);
+  if (option(sceneOptions.useDeviceOrientation, true)) {
+    deviceOrientationHandler.enable(true);
+  }
   return api;
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -145,7 +150,23 @@ export default function createFPSControls(scene: WglScene) {
     }
   }
 
-  function onMouseMove(e) {
+  function handleTouchStart(e: TouchEvent) {
+    if (e.touches.length !== 1) return; // TODO: implement pinch move?
+    mouseX = e.touches[0].clientX;
+    mouseY = e.touches[0].clientY;
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (e.touches.length !== 1) return;
+    let dy = e.touches[0].clientY - mouseY;
+    let dx = e.touches[0].clientX - mouseX;
+    updateLookAtByOffset(-dx, dy);
+    mouseX = e.touches[0].clientX;
+    mouseY = e.touches[0].clientY;
+    e.preventDefault();
+  }
+
+  function onMouseMove(e: MouseEvent) {
     let dy = e.clientY - mouseY;
     let dx = e.clientX - mouseX;
     updateLookAtByOffset(-dx, dy);
@@ -154,22 +175,24 @@ export default function createFPSControls(scene: WglScene) {
     e.preventDefault();
   }
 
-  function onMouseUp(e) {
+  function onMouseUp(e: MouseEvent) {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
   }
 
-  function onPointerLockChange(e) {
+  function onPointerLockChange(e: Event) {
     if (document.pointerLockElement) {
       document.addEventListener('mousemove', handleMousePositionChange, false);
     } else {
       document.removeEventListener('mousemove', handleMousePositionChange, false);
+      // Stop any residual movements:
       dPhi = 0;
       dIncline = 0;
     }
   }
 
-  function handleMousePositionChange(e) {
+  function handleMousePositionChange(e: MouseEvent) {
+    // This handler only called when pointer is locked.
     updateLookAtByOffset(e.movementX, -e.movementY)
   }
 
@@ -348,6 +371,9 @@ export default function createFPSControls(scene: WglScene) {
     inputTarget.removeEventListener('keydown', handleKeyDown);
     inputTarget.removeEventListener('keyup', handleKeyUp);
     inputTarget.removeEventListener('mousedown', handleMouseDown);
+
+    inputTarget.removeEventListener('touchmove', handleTouchMove);
+    inputTarget.removeEventListener('touchstart', handleTouchStart);
 
     document.removeEventListener('mousemove', handleMousePositionChange, false);
     document.removeEventListener('pointerlockchange', onPointerLockChange, false);
