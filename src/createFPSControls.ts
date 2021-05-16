@@ -46,6 +46,12 @@ export default function createFPSControls(scene: WglScene) {
 
   let captureMouse = option(sceneOptions.captureMouse, false); // whether rotation is done via locked mouse
   let mouseX: number, mouseY: number;
+  let scrollRotation = [0, 0, 0, 1];
+  let scrollT = 0;
+  let originalOrientation = [0, 0, 0, 1];
+  let targetOrientation = [0, 0, 0, 1];
+  let scrollDirection = [0, 0, 0];
+  let lastScrollTime = 0, lastScrollX = 0, lastScrollY = 0;;
 
   const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
   inputTarget.style.outline = 'none';
@@ -57,6 +63,7 @@ export default function createFPSControls(scene: WglScene) {
   inputTarget.addEventListener('mousedown', handleMouseDown);
   inputTarget.addEventListener('touchmove', handleTouchMove);
   inputTarget.addEventListener('touchstart', handleTouchStart);
+  inputTarget.addEventListener('wheel', handleWheel);
 
   document.addEventListener('pointerlockchange', onPointerLockChange, false);
   
@@ -78,7 +85,8 @@ export default function createFPSControls(scene: WglScene) {
     [INPUT_COMMANDS.TURN_UP]:       false,
     [INPUT_COMMANDS.TURN_DOWN]:     false,
   };
-  let moveSpeed = 0.01; // TODO: Might wanna make this computed based on distance to surface
+  let moveSpeed = .01; // TODO: Might wanna make this computed based on distance to surface
+  let scrollSpeed = 3;
   let flySpeed = 1e-2;
 
   const api = {
@@ -92,10 +100,12 @@ export default function createFPSControls(scene: WglScene) {
     isDeviceOrientationEnabled,
     setRotationSpeed(speed: number) { rotationSpeed = speed; return api; },
     setMoveSpeed(speed: number) { moveSpeed = speed; return api; },
+    setScrollSpeed(speed: number) { scrollSpeed = speed; return api; },
     setFlySpeed(speed: number) { flySpeed = speed; return api; },
     setSpeed(factor: number) { moveSpeed = factor; flySpeed = factor; return api; },
     getRotationSpeed() { return rotationSpeed; },
     getMoveSpeed() { return moveSpeed; },
+    getScrollSpeed() { return scrollSpeed; },
     getFlySpeed() { return flySpeed; },
     getKeymap() { return keyMap; },
     getMouseCapture() { return captureMouse; }
@@ -156,6 +166,57 @@ export default function createFPSControls(scene: WglScene) {
     mouseY = e.touches[0].clientY;
   }
 
+  function handleWheel(e: WheelEvent) {
+    e.preventDefault();
+
+    // in windows FF it scrolls differently. Want to have the same speed there:
+    let deltaFactor = e.deltaMode > 0 ? 100 : 1;
+    let scaleFactor = scrollSpeed * getScaleFactorFromDelta(-e.deltaY * deltaFactor);
+    let now = +new Date();
+    let nx = e.clientX, ny = e.clientY;
+
+    if (document.pointerLockElement) {
+      nx = drawContext.width /(drawContext.pixelRatio *2);
+      ny = drawContext.height / (drawContext.pixelRatio * 2);
+    }
+    if (document.pointerLockElement || now - lastScrollTime > 200 || Math.hypot(nx - lastScrollX, ny - lastScrollY) > 20) {
+      let cursorPos = [0, 0, -1];
+      cursorPos[0] = (nx * drawContext.pixelRatio / drawContext.width - 0.5) * 2;
+      cursorPos[1] = ((1 - ny * drawContext.pixelRatio / drawContext.height) - 0.5) * 2;
+      vec3.transformMat4(cursorPos, cursorPos, mat4.mul([], drawContext.view.cameraWorld, drawContext.inverseProjection));
+
+      scrollDirection = vec3.sub([], cursorPos, view.position);
+      vec3.normalize(scrollDirection, scrollDirection);
+      let currentCenter = vec3.clone(centerPosition);
+      originalOrientation = quat.clone(view.orientation);
+      lookAt(cameraPosition, cursorPos);
+      targetOrientation = quat.clone(view.orientation);
+      lookAt(cameraPosition, currentCenter);
+
+      lastScrollX = nx;
+      lastScrollY = ny;
+      scrollT = 0;
+      lastScrollTime = now;
+    }
+
+    if (scrollT < 1) {
+      quat.slerp(scrollRotation, originalOrientation, targetOrientation, scrollT);
+      quat.set(view.orientation, scrollRotation[0], scrollRotation[1], scrollRotation[2], scrollRotation[3]);
+      scrollT += 0.01;
+    }
+    cameraPosition[0] += moveSpeed * scaleFactor * scrollDirection[0];
+    cameraPosition[1] += moveSpeed * scaleFactor * scrollDirection[1];
+    cameraPosition[2] += moveSpeed * scaleFactor * scrollDirection[2];
+
+    commitMatrixChanges();
+
+    e.preventDefault();
+  }
+
+  function getScaleFactorFromDelta(delta: number) {
+    return Math.sign(delta) * Math.min(0.25, Math.abs(delta / 128));
+  }
+
   function handleTouchMove(e: TouchEvent) {
     if (e.touches.length !== 1) return;
     let dy = e.touches[0].clientY - mouseY;
@@ -189,6 +250,7 @@ export default function createFPSControls(scene: WglScene) {
       dPhi = 0;
       dIncline = 0;
     }
+    (api as any).fire('pointer-locked', document.pointerLockElement);
   }
 
   function handleMousePositionChange(e: MouseEvent) {
@@ -374,6 +436,7 @@ export default function createFPSControls(scene: WglScene) {
 
     inputTarget.removeEventListener('touchmove', handleTouchMove);
     inputTarget.removeEventListener('touchstart', handleTouchStart);
+    inputTarget.removeEventListener('wheel', handleWheel);
 
     document.removeEventListener('mousemove', handleMousePositionChange, false);
     document.removeEventListener('pointerlockchange', onPointerLockChange, false);

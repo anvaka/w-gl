@@ -8,6 +8,7 @@
  window.yel = document.querySelector('.y');
  window.zel = document.querySelector('.z');
  
+ let wheelTimeout;
  let upCollection = new WireCollection(10, { width: 4 });
  window.up = upCollection.add({
    from: {x: 0, y: 0, z: 0, color: 0x0000ffff},
@@ -26,8 +27,10 @@
  let scene = createScene(document.querySelector('canvas'), {
    controls: wgl.fpsControls,
    near: near,
-   captureMouse: true
+   captureMouse: true,
+   useDeviceOrientation: false
  });
+ scene.getCameraController().setScrollSpeed(200);
  wgl.createFPSControlsUI(document.body, scene.getCameraController());
  // let alpha = scene.getDrawContext().fov;
  function createPoint() {
@@ -57,7 +60,7 @@
  }
  
  drawGrid(scene);
- scene.getCameraController().lookAt([0, -10, 5], [0, 0, 0]);
+ scene.getDrawContext().view.lookAt([0, -10, 5], [0, 0, 0], [0, 0, 1]);
  // createGuide(scene);
  scene.appendChild(upCollection)
  let cubeLines = new wgl.WireCollection(22, {width:2, is3D: true, allowColors: true});
@@ -162,17 +165,43 @@
   //    size: 0.2
   //  });
 //  })
+ document.addEventListener('wheel', function (e) {
+   showWheel(e);
+
+ });
+
+ function showWheel(e) {
+   let w = document.querySelector('.wheel');
+   w.style.opacity = 1;
+   w.style.left = e.clientX + 'px';
+   w.style.top = e.clientY + 'px';
+   if (e.deltaY < 0) w.classList.add('up')
+   else w.classList.remove('up');
+   clearTimeout(wheelTimeout)
+   wheelTimeout = setTimeout(() => {
+     w.style.opacity = 0;
+   }, 100)
+ }
+
  document.addEventListener('mousemove', function (e) {
-   let pos = scene.getSceneCoordinate(e.clientX, e.clientY);
-   mouseUI.update({ 
-     x: pos[0],
-     y: pos[1],
-     z: pos[2],
-     color: 0xff00ffff,
-     size: 0.2
-   });
+//    let dc = scene.getDrawContext();
+//    let cursorPos = [0, 0, -1];
+//   cursorPos[0] = (e.clientX * dc.pixelRatio / dc.width - 0.5) * 2;
+//   cursorPos[1] = ((1 - e.clientY * dc.pixelRatio / dc.height) - 0.5) * 2;
+//   vec3.transformMat4(cursorPos, cursorPos, mat4.mul([], dc.view.cameraWorld, dc.inverseProjection));
+//   let pos = cursorPos;
+//   //console.log(pos);
+//    //let pos = vec3.transformMat4([], cursorPos, dc.view.cameraWorld)
+//    // let pos = scene.getSceneCoordinate(e.clientX, e.clientY);
+//    mouseUI.update({ 
+//      x: pos[0],
+//      y: pos[1],
+//      z: pos[2],
+//      color: 0xff00ffff,
+//      size: 0.2
+//    });
  
-   scene.renderFrame();
+//    scene.renderFrame();
  });
  
  //let someShape = createCameraImage();
@@ -331,9 +360,9 @@
  
  function drawGrid(scene) {
    let count = 100;
-   appendGrid(scene, -count, count, 1, 1.5, 0x113333ff);
-   appendGrid(scene, -count, count, 5, 3, 0x226666ff);
-   appendGrid(scene, -count, count, 10, 4, 0x229999ff);
+   appendGrid(scene, -count, count, 1, 1.5, 0x11333344);
+   appendGrid(scene, -count, count, 5, 3, 0x22666644);
+   appendGrid(scene, -count, count, 10, 4, 0x22999944);
  }
  
  function appendGrid(scene, from, to, step, width, color) {

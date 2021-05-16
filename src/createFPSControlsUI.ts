@@ -14,7 +14,6 @@ export default function createFPSControlsUI(parent: Element, inputControls: any)
   parent.appendChild(container);
   let buttons = Array.from(container.querySelectorAll('a.navigation-btn'));
   let disposeList = buttons.map(createHandler);
-  inputControls.on('move', updateTransforms);
 
   // Mouse capture handlers
   let captureMouse = container.querySelector('#capture-mouse') as HTMLInputElement;
@@ -22,7 +21,6 @@ export default function createFPSControlsUI(parent: Element, inputControls: any)
     captureMouse.checked = true;
   }
   captureMouse.addEventListener('change', onCaptureMouseChangedFromUI);
-  inputControls.on('mouse-capture', onCaptureMouseChangedFromControls);
 
   // device orientation handlers
   let deviceOrientation = container.querySelector('#device-orientation') as HTMLInputElement;
@@ -30,9 +28,18 @@ export default function createFPSControlsUI(parent: Element, inputControls: any)
     deviceOrientation.checked = inputControls.isDeviceOrientationEnabled();
     deviceOrientation.addEventListener('change', onDeviceOrientationChangedFromUI);
   }
+
+  inputControls.on('move', updateTransforms);
+  inputControls.on('mouse-capture', onCaptureMouseChangedFromControls);
   inputControls.on('device-orientation', onDeviceOrientationChangedFromControls);
+  inputControls.on('pointer-locked', onPointerLocked);
 
   return {dispose}
+
+  function onPointerLocked(isLocked: boolean) {
+    let cross = container.querySelector('.cross') as HTMLElement;
+    if (cross) cross.style.display = isLocked ? 'block' : 'none';
+  }
 
   function createHandler(el) {
     let command = getMoveCommand(el);
@@ -74,6 +81,9 @@ export default function createFPSControlsUI(parent: Element, inputControls: any)
   function dispose() {
     inputControls.off('move', updateTransforms);
     inputControls.off('mouse-capture', onCaptureMouseChangedFromControls);
+    inputControls.off('device-orientation', onDeviceOrientationChangedFromControls);
+    inputControls.off('pointer-locked', onPointerLocked);
+
     disposeList.forEach(x => x());
     if (container.parentElement) container.parentElement.removeChild(container);
     if (style.parentElement) style.parentElement.removeChild(style);
@@ -133,6 +143,7 @@ function getMarkup() {
     <label for='capture-mouse'>Capture mouse cursor</label>
   </div>
   ${deviceOrientationBlock()}
+  <div class='cross'>+</div>
 </div>`;
 }
 
@@ -221,6 +232,16 @@ ${prefix} .cursor-legend {
   display: none;
 }
 
+${prefix} .cross {
+  position: fixed;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 68px;
+  color: white;
+  display: none;
+}
 @media (pointer: fine) {
   ${prefix} .cursor-legend {
     display: block;

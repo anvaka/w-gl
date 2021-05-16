@@ -36,7 +36,7 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
     api.isEnabled = newEnabled;
 
     if (api.isEnabled) {
-      if (typeof window.DeviceOrientationEvent !== undefined && 
+      if (window.DeviceOrientationEvent !== undefined && 
         window.DeviceOrientationEvent.requestPermission !== undefined) {
         // We are in IOS? IOS doesn't have the deviceorientationabsolute for some reason.
         DeviceOrientationEvent.requestPermission().then(response => {
