@@ -47,22 +47,32 @@ export default class ViewMatrix {
     this.deconstructPositionRotation();
   }
 
+  /**
+   * Makes the view look at a given point
+   */
   lookAt(eye: number[], center: number[], up: number[]) {
-    mat4.lookAt(this.cameraWorld, 
+    mat4.targetTo(this.cameraWorld, 
       eye as unknown as Float32Array, 
       center as unknown as Float32Array,
       up as unknown as Float32Array
     );
+    mat4.invert(this.matrix, this.cameraWorld);
     this.deconstructPositionRotation();
     return this;
   }
 
+  /**
+   * Updates view matrix from the current orientation and position
+   */
   update() {
     mat4.fromRotationTranslation(this.cameraWorld, this.orientation, this.position);
     mat4.invert(this.matrix, this.cameraWorld);
     return this;
   }
 
+  /**
+   * Extracts current position and orientation from the `cameraWorld` matrix
+   */
   deconstructPositionRotation() {
     mat4.getTranslation(this.position, this.cameraWorld);
     mat4.getRotation(this.orientation, this.cameraWorld);
