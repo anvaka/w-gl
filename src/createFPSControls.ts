@@ -142,7 +142,7 @@ export default function createFPSControls(scene: WglScene) {
     onKey(e, 0);
   }
 
-  function handleMouseDown(e){
+  function handleMouseDown(e: MouseEvent){
     if (e.which !== 1) return; // only left button works here.
 
     if (document.pointerLockElement) {
@@ -407,7 +407,7 @@ export default function createFPSControls(scene: WglScene) {
     scene.renderFrame();
   }
 
-  function rotateBy(yaw, pitch) {
+  function rotateBy(yaw: number, pitch: number) {
     // Note order here is important: 
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up/30669
     if (yaw) {

@@ -1,7 +1,6 @@
 import {INPUT_COMMANDS} from "./createFPSControls";
 
 export default function createFPSControlsUI(parent: Element, inputControls: any) {
-  //  <div class='navigation-controls'>
   const className = 'navigation-controls';
   let container = document.createElement('div')
   container.classList.add(className);
@@ -270,7 +269,7 @@ function createPressListener(el, handler, repeatFrequency = 15) {
     clearTimeout(handle);
   }
 
-  function onDown(e) {
+  function onDown(e: Event) {
     e.preventDefault();
     document.addEventListener('mouseup', onMouseUp);
     document.addEventListener('touchend', onTouchEnd);
@@ -287,12 +286,13 @@ function createPressListener(el, handler, repeatFrequency = 15) {
     stopLoop();
   }
 
-  function onKeyDown(e) {
+  function onKeyDown(e: KeyboardEvent) {
     if(e.which === 13) { // return
       handler(1); e.preventDefault();
     }
   }
-  function onKeyUp(e) {
+
+  function onKeyUp(e: KeyboardEvent) {
     if(e.which === 13) { // return
       handler(0); e.preventDefault();
     }
