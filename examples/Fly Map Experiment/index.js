@@ -32,7 +32,7 @@
  });
  scene.getCameraController().setScrollSpeed(200);
  wgl.createFPSControlsUI(document.body, scene.getCameraController());
- // let alpha = scene.getDrawContext().fov;
+
  function createPoint() {
    let point = [];
    let r = 1;
