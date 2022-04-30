@@ -33,36 +33,38 @@ class Quad extends Element {
   }
 }
 
-let scene = createScene(document.querySelector('canvas'), { });
+// We use webgl2 for this example, but you can use webgl1 as well.
+let scene = createScene(document.querySelector('canvas'), { version: 2 });
 let renderProgram = defineProgram({
   gl: scene.getGL(),
-  vertex: `
+  vertex: `#version 300 es
   uniform mat4 modelViewProjection;
-  uniform sampler2D texture;
+  uniform sampler2D img;
 
-  attribute vec3 position;
-  varying vec2 vPoint;
+  in vec3 position;
+  out vec2 vPoint;
 
   void main() {
     gl_Position = modelViewProjection * vec4(position, 1.0);
     vPoint = position.xy + 0.5;
   }`,
 
-  fragment: `
+  fragment: `#version 300 es
   precision highp float;
 
-  uniform sampler2D texture;
-  varying vec2 vPoint;
+  uniform sampler2D img;
+  in vec2 vPoint;
+  out vec4 outColor;
 
   void main() {
-    gl_FragColor = texture2D(texture, vPoint);
+    outColor = texture(img, vPoint);
   }`,
 });
 
 let quad = new Quad(scene.getGL(), renderProgram);
 
 loadImageToCanvas('https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/11_Temple_of_Heaven.jpg/2880px-11_Temple_of_Heaven.jpg').then(canvas => {
-  renderProgram.setTextureCanvas('texture', canvas);
+  renderProgram.setTextureCanvas('img', canvas);
   scene.appendChild(quad);
   scene.renderFrame(/* immediate = */ true);
 });
