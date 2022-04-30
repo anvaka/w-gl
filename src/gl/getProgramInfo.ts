@@ -13,11 +13,11 @@ export type ProgramInfo = {
     uniforms: (ActiveTexture | ActiveUniform)[];
 }
 
-export default function getProgramInfo(programDefinition: ProgramDefinition): ProgramInfo {
+export default function getProgramInfo(programDefinition: ProgramDefinition, isWGL2: boolean): ProgramInfo {
   let attributes: BaseAttribute[] = [];
   let instancedAttributes: InstancedAttribute[] = [];
 
-  let parsedProgram = parseProgram(programDefinition.vertex, programDefinition.fragment);
+  let parsedProgram = parseProgram(programDefinition.vertex, programDefinition.fragment, isWGL2);
 
   parsedProgram.attributes.forEach(attribute => {
     const { name, type } = attribute;
@@ -75,9 +75,9 @@ export default function getProgramInfo(programDefinition: ProgramDefinition): Pr
   };
 }
 
-function parseProgram(vertex: string, fragment: string) {
+function parseProgram(vertex: string, fragment: string, isWGL2: boolean) {
   // TODO: this wouldn't work for multiline attribute definitions
-  let attribute = /attribute\s+(.+);/
+  let attribute = isWGL2 ? /in\s+(.+);/ :  /attribute\s+(.+);/
   let uniform = /uniform\s+(.+);/
   let attributes: {type: string, name: string}[] = [];
   let uniforms:{type: string, name: string}[] = [];

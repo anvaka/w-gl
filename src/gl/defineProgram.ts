@@ -216,8 +216,9 @@ export type ProgramDefinition = {
 
 export default function defineProgram(structure: ProgramDefinition) : RenderProgram {
   let gl = structure.gl;
+  let isWGL2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
 
-  let programInfo = getProgramInfo(structure);
+  let programInfo = getProgramInfo(structure, isWGL2);
   let glProgram = link(structure.vertex, structure.fragment);
   let preDrawHook = structure.preDrawHook || nothing;
   let postDrawHook = structure.postDrawHook || nothing;

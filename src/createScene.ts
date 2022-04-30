@@ -126,6 +126,7 @@ type WGLSceneOptions = {
 
   captureMouse?: boolean;
   useDeviceOrientation?: boolean;
+  version?: 1 | 2;
 }
 
 /**
@@ -217,7 +218,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
   let pixelRatio = options.devicePixelRatio || window.devicePixelRatio;
   let wglContextOptions = options.wglContextOptions;
 
-  let gl = (canvas.getContext('webgl', wglContextOptions) || 
+  let gl = (canvas.getContext(options.version === 2 ? 'webgl2' : 'webgl', wglContextOptions) || 
     canvas.getContext('experimental-webgl', wglContextOptions)
   ) as WebGLRenderingContext;
 
