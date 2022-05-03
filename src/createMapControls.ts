@@ -1,4 +1,4 @@
-import { vec3, mat4 } from 'gl-matrix';
+import { vec3, mat4, ReadonlyVec3 } from 'gl-matrix';
 import animate from 'amator';
 import createKineticAnimation from './animation/createKineticAnimation';
 import createTouchController from './input/createTouchController';
@@ -246,7 +246,7 @@ export default function createMapControls(scene: WglScene) {
     let upVector = getSpherical(upVectorSphereRadius, upVectorTheta, phi);
 
     // Finally we know both start of the upVector, and the end of the up vector, let's find the direction:
-    vec3.sub(upVector, upVector, newCameraPosition);
+    vec3.sub(upVector as vec3, upVector as vec3, newCameraPosition as any as ReadonlyVec3);
 
     vec3.set(
       cameraPosition,
@@ -257,7 +257,7 @@ export default function createMapControls(scene: WglScene) {
     vec3.add(cameraPosition, cameraPosition, centerPointPosition);
 
     // I'd assume this could be simplified? I just don't know and haven't thought yet how:
-    mat4.targetTo(view.cameraWorld, cameraPosition, centerPointPosition, upVector);
+    mat4.targetTo(view.cameraWorld, cameraPosition, centerPointPosition, upVector as any as ReadonlyVec3);
     mat4.getRotation(view.orientation, view.cameraWorld);
     view.update();
 

@@ -1,4 +1,4 @@
-import {vec3} from 'gl-matrix';
+import {ReadonlyVec3, vec3} from 'gl-matrix';
 import defineProgram from "src/gl/defineProgram";
 import GLCollection from "src/GLCollection/GLCollection";
 import DomElement from "./DomElement";
@@ -57,25 +57,25 @@ export class SeeThroughCollection extends GLCollection {
       [width/2, height/2, 0],
       [-width/2, height/2, 0],
       [-width/2, -height/2, 0],
-    ];
+    ] as ReadonlyVec3[];
 
     // We update the world transform here once. We should be doing this
     // every time when DomElement's transforms are changed!
     dom.updateWorldTransform();
 
     const quadPointTrackers = quadPoints.map(original => {
-      const point = vec3.transformMat4([], original, dom.worldModel);
+      const point = vec3.transformMat4([0, 0, 0], original, dom.worldModel);
       let ui = {
         original,
         point,
         uiId: -1
       };
       ui.uiId = this.add(ui);
-      this.uiIDToUI.set(ui.uiId, ui);
+      this.uiIDToUI.set(ui.uiId, ui as any as QuadPointTracker);
       return ui;
     });
 
-    this.domElementToPoints.set(dom, quadPointTrackers);
+    this.domElementToPoints.set(dom, quadPointTrackers as any as QuadPointTracker[]);
     (dom as any).on('update-transform', this.updateDOMElementTransform, this);
     (dom as any).on('disposed', this.disposeDomElement, this);
   }
@@ -109,7 +109,7 @@ export class SeeThroughCollection extends GLCollection {
     let quadTracker = this.domElementToPoints.get(domElement);
     if (!quadTracker) throw new Error('Unknown dom element requested transform update');
     quadTracker.forEach(tracker => {
-      vec3.transformMat4(tracker.point, tracker.original, domElement.worldModel);
+      vec3.transformMat4(tracker.point as any as vec3, tracker.original as any as ReadonlyVec3, domElement.worldModel);
       this.update(tracker.uiId, tracker);
     });
   }

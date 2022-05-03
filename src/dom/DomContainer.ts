@@ -131,7 +131,7 @@ export default class DomContainer extends Element {
     let fov = drawContext.projection[5] * drawContext.height / (2 * drawContext.pixelRatio);
     let pixelRatioIndependentWidth = drawContext.width / drawContext.pixelRatio;
     let pixelRatioIndependentHeight = drawContext.height / drawContext.pixelRatio;
-    let cameraTransform = 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(drawContext.view.matrix) + 
+    let cameraTransform = 'translateZ(' + fov + 'px)' + getCameraCSSMatrix(drawContext.view.matrix as any as number[]) + 
               'translate(' + (pixelRatioIndependentWidth/2) + 'px,' + (pixelRatioIndependentHeight /2) + 'px)';
     if (this.lastCameraTransform != cameraTransform) {
       this.lastCameraTransform = cameraTransform;

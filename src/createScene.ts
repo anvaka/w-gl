@@ -10,7 +10,7 @@ import {EventCallback, EventKey} from 'ngraph.events';
 import getInputTarget from './input/getInputTarget';
 
 // Float32 is not enough for large scenes.
-glMatrix.setMatrixArrayType(Float64Array);
+glMatrix.setMatrixArrayType(Float64Array as any as ArrayConstructor);
 
 type Size = {
   width: number;
@@ -453,7 +453,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     // TODO: this is not optimized either.
     var mvp = mat4.multiply(mat4.create(), projection, view.matrix)
     mat4.multiply(mvp, mvp, sceneRoot.model);
-    var coordinate = vec4.transformMat4([], [sceneX, sceneY, sceneZ, 1], mvp);
+    var coordinate = vec4.transformMat4([0, 0, 0, 0], [sceneX, sceneY, sceneZ, 1], mvp);
 
     var dpr = api.getPixelRatio();
     var x = width * (coordinate[0]/coordinate[3] + 1) * 0.5/dpr;

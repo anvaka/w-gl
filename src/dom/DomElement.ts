@@ -54,7 +54,7 @@ export default class DomElement extends Element {
   }
 
   draw(/* gl: WebGLRenderingContext */) {
-    let thisTransform = getObjectCSSMatrix(this.worldModel);
+    let thisTransform = getObjectCSSMatrix(this.worldModel as any as number[]);
     if (thisTransform !== this.lastTransform) {
       this.el.style.transform = thisTransform;
       this.lastTransform = thisTransform;

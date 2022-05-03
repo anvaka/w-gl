@@ -1,4 +1,4 @@
-import {vec3, quat, mat4} from 'gl-matrix';
+import {vec3, quat, mat4, vec4, ReadonlyVec3} from 'gl-matrix';
 import {WglScene} from './createScene';
 import getInputTarget from './input/getInputTarget';
 import {option, clampTo} from './cameraUtils';
@@ -6,7 +6,7 @@ import TransformEvent from './TransformEvent';
 import eventify from 'ngraph.events';
 import createDeviceOrientationHandler from './createDeviceOrientationHandler';
 
-const FRONT_VECTOR = [0, 0, -1];
+const FRONT_VECTOR = [0, 0, -1] as ReadonlyVec3;
 
 export const INPUT_COMMANDS = {
   MOVE_FORWARD:  1,
@@ -39,18 +39,18 @@ export default function createFPSControls(scene: WglScene) {
 
   // The camera follows "FPS" mode, but implemented on quaternions.
   let sceneOptions = scene.getOptions() || {};
-  const upVector = [0, 0, 1];
+  const upVector = [0, 0, 1] as vec3;
 
   let rotationSpeed = Math.PI;
   let inclinationSpeed = Math.PI * 1.618;
 
   let captureMouse = option(sceneOptions.captureMouse, false); // whether rotation is done via locked mouse
   let mouseX: number, mouseY: number;
-  let scrollRotation = [0, 0, 0, 1];
+  let scrollRotation = [0, 0, 0, 1] as vec4;
   let scrollT = 0;
-  let originalOrientation = [0, 0, 0, 1];
-  let targetOrientation = [0, 0, 0, 1];
-  let scrollDirection = [0, 0, 0];
+  let originalOrientation = [0, 0, 0, 1] as vec4;
+  let targetOrientation = [0, 0, 0, 1] as vec4;
+  let scrollDirection = [0, 0, 0] as vec3;
   let lastScrollTime = 0, lastScrollX = 0, lastScrollY = 0;;
 
   const inputTarget = getInputTarget(sceneOptions.inputTarget, drawContext.canvas);
@@ -180,12 +180,18 @@ export default function createFPSControls(scene: WglScene) {
       ny = drawContext.height / (drawContext.pixelRatio * 2);
     }
     if (document.pointerLockElement || now - lastScrollTime > 200 || Math.hypot(nx - lastScrollX, ny - lastScrollY) > 20) {
-      let cursorPos = [0, 0, -1];
+      let cursorPos = [0, 0, -1] as vec3;
       cursorPos[0] = (nx * drawContext.pixelRatio / drawContext.width - 0.5) * 2;
       cursorPos[1] = ((1 - ny * drawContext.pixelRatio / drawContext.height) - 0.5) * 2;
-      vec3.transformMat4(cursorPos, cursorPos, mat4.mul([], drawContext.view.cameraWorld, drawContext.inverseProjection));
+      vec3.transformMat4(cursorPos, cursorPos, 
+        mat4.mul([
+          0, 0, 0, 0, 
+          0, 0, 0, 0, 
+          0, 0, 0, 0, 
+          0, 0, 0, 0
+        ], drawContext.view.cameraWorld, drawContext.inverseProjection));
 
-      scrollDirection = vec3.sub([], cursorPos, view.position);
+      scrollDirection = vec3.sub([0, 0, 0], cursorPos, view.position);
       vec3.normalize(scrollDirection, scrollDirection);
       let currentCenter = vec3.clone(centerPosition);
       originalOrientation = quat.clone(view.orientation);
@@ -375,7 +381,7 @@ export default function createFPSControls(scene: WglScene) {
     (api as any).fire('move', moveState);
   }
 
-  function lookAt(eye: number[], center: number[]) {
+  function lookAt(eye: vec3, center: vec3) {
     vec3.set(cameraPosition, eye[0], eye[1], eye[2]);
     vec3.set(centerPosition, center[0], center[1], center[2]);
 
@@ -411,18 +417,18 @@ export default function createFPSControls(scene: WglScene) {
     // Note order here is important: 
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up/30669
     if (yaw) {
-      quat.mul(view.orientation, quat.setAxisAngle([], FRONT_VECTOR, yaw), view.orientation);
+      quat.mul(view.orientation, quat.setAxisAngle([0, 0, 0, 0], FRONT_VECTOR, yaw), view.orientation);
       // Wanna make sure that device orientation based API is updated after this too
       deviceOrientationHandler.useCurrentOrientation();
     }
-    if (pitch) quat.mul(view.orientation, view.orientation, quat.setAxisAngle([], [1, 0, 0], pitch));
+    if (pitch) quat.mul(view.orientation, view.orientation, quat.setAxisAngle([0, 0, 0, 0], [1, 0, 0], pitch));
   }
 
   function moveCenterBy(dx: number, dy: number) {
     // TODO: this slow downs when camera looks directly down.
     // The `dy` is in `z` coordinate, because we are working with view matrix rotations
     // where z axis is going from the screen towards the viewer
-    let delta = vec3.transformQuat([], [-dx, 0, -dy], view.orientation);
+    let delta = vec3.transformQuat([0, 0, 0], [-dx, 0, -dy], view.orientation);
     cameraPosition[0] += delta[0];
     cameraPosition[1] += delta[1];
   }

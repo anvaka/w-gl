@@ -1,4 +1,4 @@
-import {mat4} from 'gl-matrix';
+import {mat4, ReadonlyVec3} from 'gl-matrix';
 import {WglScene, DrawContext} from './createScene';
 
 /**
@@ -97,7 +97,7 @@ export default class Element {
    * Rotates this element `rad` radians around `axis`.
    */
   rotate(rad: number, axis: number[]) {
-    mat4.rotate(this.model, this.model, rad, axis);
+    mat4.rotate(this.model, this.model, rad, axis as any as ReadonlyVec3);
     this.worldTransformNeedsUpdate = true;
 
     if (this.scene) this.scene.renderFrame();
@@ -138,7 +138,7 @@ export default class Element {
    * Scales this element by vector `v`
    */
   scale(v: number[]) {
-    mat4.scale(this.model, this.model, v);
+    mat4.scale(this.model, this.model, v as any as ReadonlyVec3);
     this.worldTransformNeedsUpdate = true;
     if (this.scene) this.scene.renderFrame();
     return this;
@@ -148,7 +148,7 @@ export default class Element {
    * Translate this element by vector `v`
    */
   translate(v: number[]) {
-    mat4.translate(this.model, this.model, v);
+    mat4.translate(this.model, this.model, v as any as ReadonlyVec3);
     this.worldTransformNeedsUpdate = true;
     if (this.scene) this.scene.renderFrame();
     return this;

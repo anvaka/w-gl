@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "amator": "^1.1.0",
-    "gl-matrix": "github:anvaka/gl-matrix",
+    "gl-matrix": "^3.4.0",
     "ngraph.events": "1.2.1",
     "ngraph.graph": "^19.0.3",
     "panzoom": "^9.2.3"

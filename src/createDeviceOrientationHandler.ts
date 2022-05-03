@@ -1,7 +1,7 @@
-import {vec3, quat} from 'gl-matrix';
+import {vec3, quat, ReadonlyVec3} from 'gl-matrix';
 
 const halfToRad = .5 * Math.PI / 180;
-const FRONT = [0, 0, -1];
+const FRONT = [0, 0, -1] as ReadonlyVec3;
 
 /**
  * This object tracks device orientation and applies it to a give object's quaternion (e.g. camera).
@@ -17,9 +17,9 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
   window.addEventListener('orientationchange', updateScreenOrientation);
 
   let sceneAdjustmentNeedsUpdate = true;
-  const sceneAdjustment = [0, 0, 0, 1];
-  const deviceOrientation = [0, 0, 0, 1];
-  const screenOrientation = [0, 0, 0, 1];
+  const sceneAdjustment = [0, 0, 0, 1] as quat;
+  const deviceOrientation = [0, 0, 0, 1] as quat;
+  const screenOrientation = [0, 0, 0, 1] as quat;
   updateScreenOrientation();
 
   let api = {
@@ -84,8 +84,8 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
     if (sceneAdjustmentNeedsUpdate) {
       sceneAdjustmentNeedsUpdate = false;
       // Here we find an angle between device orientation and the object's orientation in XY plane
-      let deviceFront = vec3.transformQuat([], FRONT, deviceOrientation);
-      let cameraFront = vec3.transformQuat([], FRONT, objectOrientation);
+      let deviceFront = vec3.transformQuat([0, 0, 0], FRONT, deviceOrientation);
+      let cameraFront = vec3.transformQuat([0, 0, 0], FRONT, objectOrientation);
 
       // Since we care only about 2D projection:
       let xyDot = deviceFront[0] * cameraFront[0] + deviceFront[1] * cameraFront[1];
