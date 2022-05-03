@@ -1,5 +1,5 @@
 /**
- * Maps a glsl uniform type to correponding
+ * Maps a glsl uniform type to corresponding
  */
 export const UniformTypeToFunctionName = {
   mat4: 'uniformMatrix4fv',
@@ -8,7 +8,8 @@ export const UniformTypeToFunctionName = {
   vec4: 'uniform4fv',
   vec3: 'uniform3fv',
   vec2: 'uniform2fv',
-  float: 'uniform1f'
+  float: 'uniform1f',
+  bool: 'uniform1i',
 }
 
 /**

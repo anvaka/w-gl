@@ -284,7 +284,7 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
 
     code.addToAPI("setTextureCanvas: setTextureCanvas,");
 
-    let cases = textures.map((t) => {
+    let textureInitCode = textures.map((t) => {
       return `
       case '${t.name}': {
         ${t.getTextureInitCanvasBlock()}
@@ -296,11 +296,25 @@ export default function defineProgram(structure: ProgramDefinition) : RenderProg
     code.addToImplementation(`
   function setTextureCanvas(textureName, textureCanvas) {
     switch(textureName) {
-      ${cases.join("\n      ")}
+      ${textureInitCode.join("\n      ")}
     }
     throw new Error('Unknown texture name: ' + textureName);
   }
 `);
+
+    const textureGetCode = textures.map((t) => {
+      return `case '${t.name}': return ${t.variableName};`
+    });
+    
+    code.addToAPI("getTextureByName: getTextureByName,");
+    code.addToImplementation(`
+  function getTextureByName(textureName) {
+    switch(textureName) {
+      ${textureGetCode.join("\n      ")}
+    }
+    throw new Error('Unknown texture name: ' + textureName);
+  }
+`)
   }
 
   function addCodeThatDrawsBuffer(programInfo: ProgramInfo, code: FinalCode) {
