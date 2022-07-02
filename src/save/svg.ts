@@ -22,7 +22,8 @@ type LineVisitor = (from: ColorPoint, to: ColorPoint) => void;
 type LineCollectionTrait = {
   forEachLine: (visitor: LineVisitor) => void;
   getLineColor: (from?: ColorPoint, to?: ColorPoint) => number[];
-  width?: number
+  width?: number,
+  multiColorSegment?: boolean
 } & Element;
 
 /**
@@ -144,7 +145,9 @@ function renderLinesCollection(element: LineCollectionTrait, context: SVGRenderi
   let {beforeWrite, round} = settings;
 
   let elementGraph = createGraph() as ExportGraph;
+  let graphsByColor = new Map<string, ExportGraph>();
 
+  let {multiColorSegment} = element;
   let project = getProjector(element, context, round)
 
   element.forEachLine((from, to) => {
@@ -156,61 +159,87 @@ function renderLinesCollection(element: LineCollectionTrait, context: SVGRenderi
       let fromId = `${f.x}|${f.y}`;
       let toId = `${t.x}|${t.y}`;
 
-      if (!elementGraph.getNode(fromId)) elementGraph.addNode(fromId, f);
-      if (!elementGraph.getNode(toId)) elementGraph.addNode(toId, t);
-      if (!elementGraph.hasLink(fromId, toId)) elementGraph.addLink(fromId, toId, { stroke })
-    }
-  });
+      let targetGraph = elementGraph;
 
-  if (elementGraph.getLinksCount() === 0) return; // all outside
-
-  const strokeColor = toHexColor(element.getLineColor());
-  let elementWidth = element.width === undefined ? 1 : element.width;
-  const strokeWidth = elementWidth / element.scene.getPixelRatio();
-  let style = `fill="none" stroke-width="${strokeWidth}" stroke="${strokeColor}"`
-  let openTag = (element as any).id ? `<g id="${(element as any).id}" ${style}>` : `<g ${style}>`
-  context.write(openTag);
-
-  let globalOrder = getGlobalOrder(elementGraph);
-  let lastNode: NodeId | null = null;
-  let lastPath: NodeId[] | null = null;
-  globalOrder.forEach(link => {
-    let {from, to} = link;
-    if (from !== lastNode) {
-      if (to === lastNode) {
-        // Swap them so that we can keep the path going.
-        let temp = from as NodeId;
-        from = to;
-        to = temp;
-      } else {
-        commitLastPath();
-        lastPath = [];
+      if (multiColorSegment) {
+        targetGraph = graphsByColor.get(stroke) as ExportGraph;
+        if (!targetGraph) {
+          targetGraph = createGraph() as ExportGraph;
+          graphsByColor.set(stroke, targetGraph);
+        }
       }
+
+      if (!targetGraph.getNode(fromId)) targetGraph.addNode(fromId, f);
+      if (!targetGraph.getNode(toId)) targetGraph.addNode(toId, t);
+      if (!targetGraph.hasLink(fromId, toId)) targetGraph.addLink(fromId, toId, { stroke })
     }
-    if (lastPath) lastPath.push(from as NodeId, to);
-    lastNode = to;
   });
-  commitLastPath();
 
-  context.write('</g>');
-
-  function commitLastPath() {
-    if (!lastPath) return;
-    let points = lastPath.map(x => {
-      let node = elementGraph.getNode(x);
-      if (node) return node.data;
-      throw new Error('Node is found in the path construction, but missing in the graph')
+  let graphsToVisit: [ExportGraph, string][] = [];
+  if (multiColorSegment) {
+    graphsByColor.forEach((graph, color) => {
+      graphsToVisit.push([graph, color]);
     });
 
-    if (beforeWrite && !beforeWrite(points)) {
-      return;
-    }
-
-    let d = `M${points[0].x} ${points[0].y} L` + points.slice(1).map(p => `${p.x} ${p.y}`).join(',');
-    context.write(`<path d="${d}"/>`)
+  } else {
+    graphsToVisit.push([elementGraph, toHexColor(element.getLineColor())]);
   }
+
+  graphsToVisit.forEach(([elementGraph, strokeColor]) => {
+    if (elementGraph.getLinksCount() === 0) return; // all outside
+
+    let elementWidth = element.width === undefined ? 1 : element.width;
+    const strokeWidth = elementWidth / (element.scene as WglScene).getPixelRatio();
+    let style = `fill="none" stroke-width="${strokeWidth}" stroke="${strokeColor}"`
+    let openTag = (element as any).id ? `<g id="${(element as any).id}" ${style}>` : `<g ${style}>`
+    context.write(openTag);
+
+    let globalOrder = getGlobalOrder(elementGraph);
+    let lastNode: NodeId | null = null;
+    let lastPath: NodeId[] | null = null;
+    globalOrder.forEach(link => {
+      let {from, to} = link;
+      if (from !== lastNode) {
+        if (to === lastNode) {
+          // Swap them so that we can keep the path going.
+          let temp = from as NodeId;
+          from = to;
+          to = temp;
+        } else {
+          commitLastPath();
+          lastPath = [];
+        }
+      }
+      if (lastPath) lastPath.push(from as NodeId, to);
+      lastNode = to;
+    });
+    commitLastPath();
+
+    context.write('</g>');
+
+    function commitLastPath() {
+      if (!lastPath) return;
+      let points = lastPath.map(x => {
+        let node = elementGraph.getNode(x);
+        if (node) return node.data;
+        throw new Error('Node is found in the path construction, but missing in the graph')
+      });
+
+      if (beforeWrite && !beforeWrite(points)) {
+        return;
+      }
+
+      let d = `M${points[0].x} ${points[0].y} L` + points.slice(1).map(p => `${p.x} ${p.y}`).join(',');
+      context.write(`<path d="${d}"/>`)
+    }
+  })
 }
 
+/**
+ * Global order performs DFS on the graph, so that if it is a pen-plotter renders
+ * an SVG we have a long path. This is not necessarily optimal, but likely better
+ * than nothing.
+ */
 function getGlobalOrder(graph: ExportGraph) {
   let visited = new Set();
   let globalOrder: StackNode[] = [];
