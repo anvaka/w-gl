@@ -37,9 +37,9 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
 
     if (api.isEnabled) {
       if (window.DeviceOrientationEvent !== undefined && 
-        window.DeviceOrientationEvent.requestPermission !== undefined) {
+        (window.DeviceOrientationEvent as any).requestPermission !== undefined) {
         // We are in IOS? IOS doesn't have the deviceorientationabsolute for some reason.
-        DeviceOrientationEvent.requestPermission().then(response => {
+        (DeviceOrientationEvent as any).requestPermission().then(response => {
           if (response === 'granted') {
             deviceOrientationEventName = 'deviceorientation';
             window.addEventListener(deviceOrientationEventName as any, onDeviceOrientationChange);
@@ -71,7 +71,7 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
       // to relative device orientation which is not very accurate and prone to errors.
       // Consumers of this API better should allow users to switch to non-device-orientation based
       // means of movement
-      window.removeEventListener('deviceorientationabsolute', onDeviceOrientationChange);
+      window.removeEventListener('deviceorientationabsolute' as any, onDeviceOrientationChange);
       window.addEventListener('deviceorientation', onDeviceOrientationChange);
       deviceOrientationEventName = 'deviceorientation';
       api.isAbsolute = false;
@@ -146,7 +146,7 @@ export default function createDeviceOrientationHandler(inputTarget, objectOrient
   function dispose() {
     inputTarget.removeEventListener('touchstart', pauseDeviceOrientation);
     inputTarget.removeEventListener('touchend', resetScreenAdjustment);
-    window.removeEventListener('deviceorientationabsolute', onDeviceOrientationChange);
+    window.removeEventListener('deviceorientationabsolute' as any, onDeviceOrientationChange);
     window.removeEventListener('deviceorientation', onDeviceOrientationChange);
     window.removeEventListener('orientationchange', updateScreenOrientation);
   }

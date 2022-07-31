@@ -1,4 +1,3 @@
-import buble from '@rollup/plugin-buble';
 import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import ts from 'rollup-plugin-typescript2'
@@ -31,8 +30,7 @@ export default {
       },
     }),
 		resolve(),
-		commonjs(),
-    buble()
+		commonjs()
 	],
   output: [
     {
