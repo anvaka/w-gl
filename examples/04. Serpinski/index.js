@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-const {createScene,  createGuide} = window.wgl;
+const {createScene} = window.wgl;
 const {PointCollection} = window;
 
 // Render half a million circles in the width x height region
