@@ -274,6 +274,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
 
     getPixelRatio,
     setPixelRatio,
+    updateCanvasSize,
 
     getCameraController,
     setCameraController,
