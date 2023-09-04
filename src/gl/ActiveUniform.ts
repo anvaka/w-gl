@@ -10,6 +10,7 @@ export const UniformTypeToFunctionName = {
   vec2: 'uniform2fv',
   float: 'uniform1f',
   bool: 'uniform1i',
+  int: 'uniform1i',
 }
 
 /**
