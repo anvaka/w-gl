@@ -43,6 +43,19 @@ scene.setViewBox({
 })
 ```
 
+You can also install from CDN:
+
+```html
+    <script src='https://cdn.jsdelivr.net/npm/w-gl@0.21.1/build/wgl.min.js'></script>
+```
+
+This will make library available under global `wgl` name, and the rest remains the same:
+
+```
+const {createScene, WireCollection} = wgl;
+```
+
+
 # license
 
 MIT
