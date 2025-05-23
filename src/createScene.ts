@@ -8,6 +8,7 @@ import ViewMatrix from './ViewMatrix';
 import createMapControls from './createMapControls';
 import {EventCallback, EventKey} from 'ngraph.events';
 import getInputTarget from './input/getInputTarget';
+import animateFlyTo from './animation/flyTo';
 
 // Float32 is not enough for large scenes.
 glMatrix.setMatrixArrayType(Float64Array as any as ArrayConstructor);
@@ -149,12 +150,38 @@ export interface SceneCoordinate {
   z: number
 }
 
+/**
+ * Options for the flyTo camera animation
+ */
+export interface FlyToOptions {
+  /** Target x-coordinate */
+  x: number;
+  /** Target y-coordinate */
+  y: number;
+  /** Optional target z-coordinate. If not specified, current camera z is used */
+  z?: number;
+  /** Animation duration in milliseconds. Default is 500ms */
+  durationMs?: number;
+  /** 
+   * Easing function name. Supported values: 'linear', 'easeInQuad', 'easeOutQuad', 'easeInOutQuad',
+   * 'easeInCubic', 'easeOutCubic', 'easeInOutCubic'. Default is 'easeInOutCubic'
+   */
+  easing?: string;
+  /** Callback function to execute when animation completes */
+  done?: () => void;
+}
+
 export interface WglScene extends EventedType {
   /**
    * Given `clientX` and `clientY` of a mouse coordinate, return corresponding coordinate
    * in the rendered world.
    */
   getSceneCoordinate(clientX: number, clientY: number): vec3;
+
+  /**
+   * Performs a smooth camera animation to the specified coordinates
+   */
+  flyTo(options: FlyToOptions): void;
 
   /**
    * Appends a new child to the scene
@@ -271,6 +298,7 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     clear,
     dispose,
     renderFrame,
+    flyTo,
 
     getPixelRatio,
     setPixelRatio,
@@ -511,5 +539,31 @@ export default function createScene(canvas: HTMLCanvasElement, options: WGLScene
     if (eventName === 'mousemove') hasMouseMoveListeners = true;
 
     return realOn(eventName, callback, context);
+  }
+
+  function flyTo(options: FlyToOptions) {
+    if (!options || typeof options.x !== 'number' || typeof options.y !== 'number') {
+      throw new Error('flyTo requires at minimum x and y coordinates');
+    }
+
+    // Delegate to camera controller if it supports flyTo
+    if (cameraController && cameraController.flyTo) {
+      return cameraController.flyTo(options);
+    }
+    
+    // Use our separated animateFlyTo implementation
+    return animateFlyTo({
+      ...options,
+      view,
+      cameraController,
+      renderFrame,
+      cancelFrameToken: () => {
+        if (frameToken) {
+          cancelAnimationFrame(frameToken);
+          frameToken = 0;
+        }
+      },
+      requestFrameToken: (callback) => requestAnimationFrame(callback)
+    });
   }
 }
